@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LineageMap — SQL Column &amp; Table Lineage Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+:root{
+  --bg:#0A0E14;
+  --bg-elev:#0D1219;
+  --surface:#131A24;
+  --surface-2:#1A2330;
+  --surface-3:#212C3B;
+  --border:#243040;
+  --border-soft:#1B2530;
+  --text:#E7ECF3;
+  --text-dim:#94A3B8;
+  --text-faint:#57657A;
+  --accent:#35D7BE;
+  --accent-dim:#1E4F49;
+  --accent-view:#B58CF5;
+  --accent-view-dim:#3B3159;
+  --accent-table:#5B9BFF;
+  --accent-table-dim:#1F3355;
+  --accent-lookup:#F2A93B;
+  --accent-lookup-dim:#4A3617;
+  --accent-temp:#FF7A6E;
+  --accent-temp-dim:#4A2621;
+  --danger:#FF5C5C;
+  --radius:10px;
+  --radius-sm:6px;
+  --shadow-lg:0 20px 60px -20px rgba(0,0,0,.6);
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --display: 'Space Grotesk', sans-serif;
+  --body: 'Inter', sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(53,215,190,.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(181,140,245,.06), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent-dim);color:var(--text);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--border);}
+a{color:inherit;}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* ---------- layout shell ---------- */
+.app{display:flex;flex-direction:column;min-height:100vh;}
+
+/* ---------- header ---------- */
+.header{
+  position:sticky;top:0;z-index:40;
+  display:flex;align-items:center;gap:20px;
+  padding:14px 24px;
+  background:rgba(10,14,20,.85);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border-soft);
+}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;}
+.brand-mark{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(155deg,var(--accent) 0%, var(--accent-view) 130%);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 6px 18px -6px rgba(53,215,190,.5);
+}
+.brand-mark svg{width:19px;height:19px;}
+.brand-text h1{
+  font-family:var(--display);font-size:17px;font-weight:700;margin:0;letter-spacing:.2px;
+}
+.brand-text p{margin:0;font-size:11px;color:var(--text-faint);font-family:var(--mono);letter-spacing:.3px;}
+
+.header-actions{display:flex;align-items:center;gap:10px;}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);
+  font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
+  transition:.15s border-color, .15s background, .15s transform;
+}
+.btn svg{width:14px;height:14px;flex-shrink:0;}
+.btn:hover{border-color:var(--accent);background:var(--surface-3);}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#04211D;}
+.btn-primary:hover{background:#4EE3CB;border-color:#4EE3CB;}
+.btn-ghost{background:transparent;}
+.btn-sm{padding:6px 10px;font-size:12px;border-radius:7px;}
+.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none;}
+.pill{
+  font-family:var(--mono);font-size:11px;color:var(--accent);
+  background:var(--accent-dim);border:1px solid rgba(53,215,190,.35);
+  padding:2px 8px;border-radius:99px;
+}
+
+/* dropdown menu */
+.menu-wrap{position:relative;}
+.menu{
+  position:absolute;right:0;top:calc(100% + 8px);min-width:210px;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--shadow-lg);padding:6px;display:none;z-index:60;
+}
+.menu.open{display:block;}
+.menu-item{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:9px 10px;border-radius:7px;border:none;background:none;color:var(--text);
+  font-size:13px;cursor:pointer;
+}
+.menu-item:hover{background:var(--surface-3);}
+.menu-item svg{width:14px;height:14px;color:var(--text-dim);}
+.menu-sep{height:1px;background:var(--border-soft);margin:5px 4px;}
+
+/* ---------- tabs ---------- */
+.tabbar{
+  display:flex;align-items:center;gap:4px;padding:0 24px;
+  border-bottom:1px solid var(--border-soft);
+  background:var(--bg-elev);overflow-x:auto;
+}
+.tab{
+  display:flex;align-items:center;gap:7px;
+  padding:13px 16px;font-size:13px;font-weight:600;color:var(--text-faint);
+  border:none;background:none;cursor:pointer;position:relative;white-space:nowrap;
+}
+.tab svg{width:15px;height:15px;}
+.tab:hover{color:var(--text-dim);}
+.tab.active{color:var(--text);}
+.tab.active::after{
+  content:'';position:absolute;left:14px;right:14px;bottom:-1px;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent-view));border-radius:2px;
+}
+.tab-count{
+  font-family:var(--mono);font-size:10px;color:var(--text-faint);
+  background:var(--surface-2);padding:1px 6px;border-radius:99px;
+}
+.tab.active .tab-count{color:var(--accent);background:var(--accent-dim);}
+
+/* ---------- filter bar ---------- */
+.filterbar{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:12px 24px;border-bottom:1px solid var(--border-soft);
+  background:rgba(19,26,36,.5);
+}
+.search-box{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:8px 12px;flex:1;min-width:180px;max-width:340px;
+}
+.search-box svg{width:14px;height:14px;color:var(--text-faint);flex-shrink:0;}
+.search-box input{
+  border:none;background:none;outline:none;color:var(--text);font-size:13px;width:100%;
+  font-family:var(--body);
+}
+.search-box input::placeholder{color:var(--text-faint);}
+
+.msel{position:relative;}
+.msel-btn{
+  display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text-dim);
+  font-size:12.5px;font-weight:600;cursor:pointer;
+}
+.msel-btn svg{width:12px;height:12px;}
+.msel-btn.has-filter{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.msel-panel{
+  position:absolute;top:calc(100% + 8px);left:0;width:280px;max-height:340px;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--shadow-lg);display:none;flex-direction:column;z-index:55;overflow:hidden;
+}
+.msel-panel.open{display:flex;}
+.msel-search{padding:8px;border-bottom:1px solid var(--border-soft);}
+.msel-search input{
+  width:100%;padding:7px 9px;border-radius:6px;border:1px solid var(--border);
+  background:var(--surface);color:var(--text);font-size:12.5px;outline:none;
+}
+.msel-actions{display:flex;gap:6px;padding:7px 8px;border-bottom:1px solid var(--border-soft);}
+.msel-actions button{
+  flex:1;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--surface);
+  color:var(--text-dim);font-size:11px;cursor:pointer;font-weight:600;
+}
+.msel-actions button:hover{color:var(--text);border-color:var(--accent);}
+.msel-list{overflow-y:auto;padding:5px;flex:1;}
+.msel-opt{
+  display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;
+}
+.msel-opt:hover{background:var(--surface-3);}
+.msel-opt input{accent-color:var(--accent);}
+.msel-opt .dot{width:7px;height:7px;border-radius:2px;flex-shrink:0;}
+.msel-opt .lbl{font-family:var(--mono);font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.msel-opt .cnt{margin-left:auto;font-size:10.5px;color:var(--text-faint);}
+.filter-clear{font-size:11.5px;color:var(--text-faint);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+.filter-clear:hover{color:var(--accent);}
+
+/* ---------- main ---------- */
+.main{flex:1;padding:24px;max-width:1520px;width:100%;margin:0 auto;}
+.hidden{display:none !important;}
+
+/* empty state */
+.empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:70px 24px;margin-top:20px;
+}
+.empty-badge{
+  font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;
+  margin-bottom:14px;
+}
+.empty h2{font-family:var(--display);font-size:32px;margin:0 0 12px;max-width:640px;line-height:1.25;}
+.empty p{color:var(--text-dim);max-width:520px;margin:0 0 30px;font-size:14.5px;line-height:1.6;}
+.dropzone{
+  width:100%;max-width:560px;border:1.5px dashed var(--border);border-radius:14px;
+  padding:38px 24px;background:var(--surface);cursor:pointer;transition:.15s;
+}
+.dropzone:hover, .dropzone.drag{border-color:var(--accent);background:var(--surface-2);}
+.dropzone svg{width:34px;height:34px;color:var(--accent);margin-bottom:12px;}
+.dropzone strong{display:block;font-size:14.5px;margin-bottom:4px;}
+.dropzone span{font-size:12.5px;color:var(--text-faint);}
+.empty-or{margin:18px 0;font-size:11px;color:var(--text-faint);letter-spacing:1px;text-transform:uppercase;}
+.empty-features{display:flex;gap:26px;margin-top:34px;flex-wrap:wrap;justify-content:center;max-width:680px;}
+.empty-feat{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11.5px;color:var(--text-faint);max-width:150px;}
+.empty-feat svg{width:18px;height:18px;color:var(--accent-view);}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);
+  padding:16px 18px;position:relative;overflow:hidden;
+}
+.kpi-card::before{
+  content:'';position:absolute;top:0;left:0;width:100%;height:2px;
+  background:var(--accent-color,var(--accent));opacity:.7;
+}
+.kpi-val{font-family:var(--display);font-size:28px;font-weight:700;line-height:1;margin-bottom:6px;}
+.kpi-lbl{font-size:11.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;font-weight:600;}
+
+.panel{
+  background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);
+  margin-bottom:20px;overflow:hidden;
+}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:14px 18px;border-bottom:1px solid var(--border-soft);
+}
+.panel-head h3{margin:0;font-family:var(--display);font-size:14.5px;font-weight:600;}
+.panel-head p{margin:2px 0 0;font-size:11.5px;color:var(--text-faint);}
+.panel-body{padding:16px 18px;}
+
+/* bar chart */
+.barrow{display:flex;align-items:center;gap:10px;padding:6px 0;}
+.barrow .name{width:190px;flex-shrink:0;font-family:var(--mono);font-size:12px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.barrow .track{flex:1;height:9px;background:var(--surface-2);border-radius:5px;overflow:hidden;}
+.barrow .fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent),var(--accent-view));}
+.barrow .val{width:26px;text-align:right;font-family:var(--mono);font-size:11.5px;color:var(--text-faint);}
+
+/* generic data table */
+.table-wrap{overflow-x:auto;}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.dt thead th{
+  position:sticky;top:0;background:var(--surface-2);text-align:left;
+  padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
+  color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;
+}
+table.dt thead th:hover{color:var(--text);}
+table.dt thead th .arrow{opacity:0;margin-left:4px;font-size:9px;}
+table.dt thead th.sorted .arrow{opacity:1;color:var(--accent);}
+table.dt tbody td{padding:9px 12px;border-bottom:1px solid var(--border-soft);vertical-align:top;color:var(--text-dim);}
+table.dt tbody tr:hover{background:var(--surface-2);}
+table.dt tbody tr:last-child td{border-bottom:none;}
+.mono{font-family:var(--mono);color:var(--text);}
+.badge{
+  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:99px;font-size:10.5px;
+  font-weight:600;font-family:var(--mono);white-space:nowrap;
+}
+.badge-proc{background:var(--accent-dim);color:var(--accent);}
+.badge-view{background:var(--accent-view-dim);color:var(--accent-view);}
+.badge-table{background:var(--accent-table-dim);color:var(--accent-table);}
+.badge-lookup{background:var(--accent-lookup-dim);color:var(--accent-lookup);}
+.badge-temp{background:var(--accent-temp-dim);color:var(--accent-temp);}
+.badge-neutral{background:var(--surface-3);color:var(--text-dim);}
+.expr-cell{max-width:280px;font-family:var(--mono);font-size:11.5px;color:var(--text-faint);white-space:pre-wrap;}
+.flag-yes{color:var(--accent-lookup);}
+.flag-no{color:var(--text-faint);}
+
+.table-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border-soft);flex-wrap:wrap;gap:10px;}
+.table-footer .info{font-size:12px;color:var(--text-faint);}
+.pager{display:flex;align-items:center;gap:6px;}
+.pager button{
+  width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface-2);
+  color:var(--text-dim);cursor:pointer;font-size:12px;
+}
+.pager button:hover:not(:disabled){border-color:var(--accent);color:var(--text);}
+.pager button:disabled{opacity:.35;cursor:not-allowed;}
+.pager select{
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);border-radius:7px;
+  padding:6px 8px;font-size:12px;
+}
+
+/* matrix tab */
+.matrix-table{width:100%;font-size:13px;}
+.matrix-group{border:1px solid var(--border-soft);border-radius:9px;margin-bottom:10px;overflow:hidden;}
+.matrix-head{
+  display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;background:var(--surface);
+}
+.matrix-head:hover{background:var(--surface-2);}
+.matrix-head .chev{width:14px;height:14px;color:var(--text-faint);transition:transform .15s;flex-shrink:0;}
+.matrix-group.open .chev{transform:rotate(90deg);}
+.matrix-head .tname{font-family:var(--mono);font-weight:600;font-size:13.5px;}
+.matrix-head .meta{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.matrix-body{display:none;padding:0 14px 12px 40px;}
+.matrix-group.open .matrix-body{display:block;}
+.matrix-col-row{
+  display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-top:1px solid var(--border-soft);
+  flex-wrap:wrap;
+}
+.matrix-col-row:first-child{border-top:none;}
+.matrix-col-row .cname{font-family:var(--mono);font-size:12px;color:var(--text);width:160px;flex-shrink:0;padding-top:3px;}
+.matrix-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
+.chip{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:10.5px;
+  background:var(--surface-3);border:1px solid var(--border);color:var(--text-dim);font-family:var(--mono);
+}
+.chip .u{color:var(--text-faint);font-family:var(--body);font-style:italic;}
+
+/* diagram */
+.diagram-shell{display:flex;gap:14px;align-items:flex-start;}
+.diagram-panel{flex:1;background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);overflow:hidden;position:relative;min-width:0;}
+.diagram-toolbar{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap;
+}
+.zoom-controls{display:flex;gap:4px;margin-left:auto;}
+.zoom-controls button{
+  width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--surface-2);
+  color:var(--text-dim);cursor:pointer;
+}
+.zoom-controls button:hover{color:var(--text);border-color:var(--accent);}
+#diagramSvgHost{width:100%;height:640px;cursor:grab;}
+#diagramSvgHost:active{cursor:grabbing;}
+.diagram-side{width:230px;flex-shrink:0;display:flex;flex-direction:column;gap:12px;}
+.legend-box{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px;}
+.legend-box h4{margin:0 0 10px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-faint);}
+.legend-row{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--text-dim);margin-bottom:8px;}
+.legend-swatch{width:14px;height:14px;border-radius:4px;flex-shrink:0;}
+.legend-line{width:22px;height:0;border-top:2px solid;flex-shrink:0;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-dim);padding:7px 0;}
+.switch{position:relative;width:34px;height:19px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.switch .track{position:absolute;inset:0;background:var(--surface-3);border-radius:99px;transition:.15s;border:1px solid var(--border);}
+.switch .knob{position:absolute;top:2px;left:2px;width:13px;height:13px;background:var(--text-faint);border-radius:50%;transition:.15s;}
+.switch input:checked + .track{background:var(--accent-dim);border-color:var(--accent);}
+.switch input:checked + .track .knob{transform:translateX(15px);background:var(--accent);}
+.node-detail{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:14px;font-size:12px;}
+.node-detail h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-faint);}
+.node-detail .nd-name{font-family:var(--mono);font-size:13px;color:var(--text);word-break:break-all;margin-bottom:8px;}
+.node-detail .nd-empty{color:var(--text-faint);font-style:italic;}
+.node-detail ul{margin:0;padding-left:16px;color:var(--text-dim);}
+.node-detail li{margin-bottom:4px;font-family:var(--mono);font-size:11.5px;}
+
+/* file manager modal */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(5,7,10,.7);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:100;padding:20px;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  width:100%;max-width:560px;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;box-shadow:var(--shadow-lg);max-height:85vh;display:flex;flex-direction:column;
+}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-soft);}
+.modal-head h3{margin:0;font-family:var(--display);font-size:16px;}
+.modal-close{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:4px;}
+.modal-close:hover{color:var(--text);}
+.modal-body{padding:18px 20px;overflow-y:auto;}
+.file-list{display:flex;flex-direction:column;gap:8px;margin-top:14px;}
+.file-row{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:var(--surface-2);
+  border:1px solid var(--border-soft);
+}
+.file-row svg{width:16px;height:16px;color:var(--accent);flex-shrink:0;}
+.file-row .fname{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.file-row .fmeta{font-size:10.5px;color:var(--text-faint);font-family:var(--mono);}
+.file-row .rm{margin-left:auto;background:none;border:none;color:var(--text-faint);cursor:pointer;padding:4px;flex-shrink:0;}
+.file-row .rm:hover{color:var(--danger);}
+.small-drop{
+  border:1.5px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;
+}
+.small-drop:hover, .small-drop.drag{border-color:var(--accent);background:var(--surface-2);}
+.small-drop svg{width:22px;height:22px;color:var(--accent);margin-bottom:6px;}
+.small-drop p{margin:0;font-size:12px;color:var(--text-faint);}
+
+/* toast */
+#toastHost{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:200;}
+.toast{
+  background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:8px;padding:11px 16px;font-size:12.5px;box-shadow:var(--shadow-lg);min-width:220px;
+  animation:toastIn .2s ease-out;
+}
+.toast.err{border-left-color:var(--danger);}
+@keyframes toastIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+.footer-note{text-align:center;padding:20px;font-size:11px;color:var(--text-faint);font-family:var(--mono);}
+
+@media (max-width:900px){
+  .diagram-shell{flex-direction:column;}
+  .diagram-side{width:100%;flex-direction:row;flex-wrap:wrap;}
+  .diagram-side>*{flex:1;min-width:200px;}
+  .barrow .name{width:110px;}
+}
+</style>
+</head>
+<body>
+<input type="file" id="fileInput" accept=".xlsx,.xls" multiple style="display:none">
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="header">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="6" r="2.4" fill="#04211D"/><circle cx="19" cy="6" r="2.4" fill="#04211D"/><circle cx="12" cy="18" r="2.4" fill="#04211D"/><path d="M6.8 7.6L11 16M17.2 7.6L13 16M7.4 6H16.6" stroke="#04211D" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>LineageMap</h1>
+        <p>sql column &amp; table lineage explorer</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="pill hidden" id="sourceCountPill">0 sources loaded</span>
+      <button class="btn" id="btnManageData">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        Data sources
+      </button>
+      <div class="menu-wrap">
+        <button class="btn btn-primary" id="btnExport">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          Export
+        </button>
+        <div class="menu" id="exportMenu">
+          <button class="menu-item" id="expFull">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+            Excel — full dataset
+          </button>
+          <button class="menu-item" id="expFiltered">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+            Excel — current view
+          </button>
+          <div class="menu-sep"></div>
+          <button class="menu-item" id="expPng">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            Diagram — PNG (high‑res)
+          </button>
+          <button class="menu-item" id="expJpg">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            Diagram — JPG (high‑res)
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="tabbar hidden" id="tabbar">
+    <button class="tab active" data-tab="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      Dashboard
+    </button>
+    <button class="tab" data-tab="lineage">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      Lineage table <span class="tab-count" id="cntLineage">0</span>
+    </button>
+    <button class="tab" data-tab="matrix">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+      Column matrix <span class="tab-count" id="cntTables">0</span>
+    </button>
+    <button class="tab" data-tab="diagram">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.6 7.6L11 15M15.4 7.6L13 15M9 6h6"/></svg>
+      ER diagram
+    </button>
+  </nav>
+
+  <!-- FILTER BAR -->
+  <div class="filterbar hidden" id="filterbar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="globalSearch" placeholder="Search tables, columns, objects, expressions…">
+    </div>
+    <div class="msel" id="mselObjects"></div>
+    <div class="msel" id="mselTables"></div>
+    <div class="msel" id="mselUsage"></div>
+    <span class="filter-clear hidden" id="clearFilters">Clear filters</span>
+  </div>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- EMPTY STATE -->
+    <div class="empty" id="emptyState">
+      <div class="empty-badge">Column‑level SQL lineage</div>
+      <h2>Drop in your lineage exports. See every table, join and dependency mapped.</h2>
+      <p>Upload one or more <span class="mono" style="color:var(--text-dim)">sql_lineage_export</span> workbooks — one per stored procedure or view is fine, LineageMap merges them automatically into a single explorable model.</p>
+      <div class="dropzone" id="dropzone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L7 9m5-5l5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+        <strong>Drop Excel lineage exports here</strong>
+        <span>or click to browse — .xlsx, multiple files supported</span>
+      </div>
+      <div class="empty-or">— or —</div>
+      <button class="btn" id="btnSample">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+        Load the sample workbook
+      </button>
+      <div class="empty-features">
+        <div class="empty-feat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          Every column reference, join, filter &amp; transform in one searchable grid
+        </div>
+        <div class="empty-feat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.6 7.6L11 15M15.4 7.6L13 15M9 6h6"/></svg>
+          Interactive ER diagram of procedures, views, tables &amp; joins
+        </div>
+        <div class="empty-feat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          One‑click export to Excel and high‑resolution PNG/JPG
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD TAB -->
+    <section class="tab-panel hidden" id="panel-dashboard">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Objects overview</h3><p>Procedures &amp; views detected across all loaded workbooks</p></div>
+        </div>
+        <div class="table-wrap"><table class="dt" id="objectsTable"></table></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Most‑referenced tables</h3><p>Ranked by number of distinct procedures/views touching each table</p></div>
+        </div>
+        <div class="panel-body" id="topTablesChart"></div>
+      </div>
+    </section>
+
+    <!-- LINEAGE TABLE TAB -->
+    <section class="tab-panel hidden" id="panel-lineage">
+      <div class="panel">
+        <div class="table-wrap"><table class="dt" id="lineageTable"></table></div>
+        <div class="table-footer">
+          <span class="info" id="lineageInfo">0 rows</span>
+          <div class="pager" id="lineagePager"></div>
+          <select id="pageSizeSel">
+            <option value="15">15 / page</option>
+            <option value="25" selected>25 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- MATRIX TAB -->
+    <section class="tab-panel hidden" id="panel-matrix">
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Table → column → usage matrix</h3><p>Expand a table to see which columns are referenced, how, and by which procedures/views</p></div>
+        </div>
+        <div class="panel-body" id="matrixHost"></div>
+      </div>
+    </section>
+
+    <!-- DIAGRAM TAB -->
+    <section class="tab-panel hidden" id="panel-diagram">
+      <div class="diagram-shell">
+        <div class="diagram-panel">
+          <div class="diagram-toolbar">
+            <span style="font-size:12px;color:var(--text-faint)">Drag nodes to arrange · scroll to zoom</span>
+            <div class="zoom-controls">
+              <button id="zoomIn" title="Zoom in">+</button>
+              <button id="zoomOut" title="Zoom out">−</button>
+              <button id="zoomReset" title="Fit to view">⤢</button>
+            </div>
+          </div>
+          <div id="diagramSvgHost"></div>
+        </div>
+        <div class="diagram-side">
+          <div class="legend-box">
+            <h4>Legend</h4>
+            <div class="legend-row"><span class="legend-swatch" style="background:var(--accent)"></span> Stored procedure</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:var(--accent-view)"></span> View</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:var(--accent-table)"></span> Table</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:var(--accent-lookup)"></span> Lookup table</div>
+            <div class="legend-row"><span class="legend-swatch" style="background:var(--accent-temp);border-radius:50%"></span> Temp table / var</div>
+            <div class="legend-row"><span class="legend-line" style="border-color:var(--accent-table)"></span> Join relationship</div>
+            <div class="legend-row"><span class="legend-line" style="border-color:var(--text-faint);border-top-style:dashed"></span> Object → table usage</div>
+          </div>
+          <div class="legend-box">
+            <h4>Display</h4>
+            <div class="toggle-row">Show usage edges
+              <label class="switch"><input type="checkbox" id="toggleUsage" checked><span class="track"><span class="knob"></span></span></label>
+            </div>
+            <div class="toggle-row">Show join edges
+              <label class="switch"><input type="checkbox" id="toggleJoins" checked><span class="track"><span class="knob"></span></span></label>
+            </div>
+            <div class="toggle-row">Show edge labels
+              <label class="switch"><input type="checkbox" id="toggleLabels"><span class="track"><span class="knob"></span></span></label>
+            </div>
+          </div>
+          <div class="node-detail" id="nodeDetail">
+            <h4>Selection</h4>
+            <p class="nd-empty">Click a node to inspect its connections.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <p class="footer-note">Everything runs locally in your browser — workbooks are parsed client‑side and never leave your machine.</p>
+</div>
+
+<!-- FILE MANAGER MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Data sources</h3>
+      <button class="modal-close" id="modalClose">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="small-drop" id="smallDrop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0L7 9m5-5l5 5"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>
+        <p><strong>Add more workbooks</strong> — drop .xlsx files or click to browse</p>
+      </div>
+      <div class="file-list" id="fileList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   STATE
+============================================================ */
+const State = {
+  files: [],            // [{id,name,size,objects:[],lineage:[],relationships:[],tablesSummary:[]}]
+  model: null,           // merged model
+  activeTab: 'dashboard',
+  filters: { search:'', objects:new Set(), tables:new Set(), usage:new Set() },
+  lineageSort: { key:'sourceObject', dir:1 },
+  lineagePage: 1,
+  pageSize: 25,
+  diagram: { showUsage:true, showJoins:true, showLabels:false, selected:null, sim:null }
+};
+
+const SHEET_NAMES = { lineage:'Column Lineage', rel:'Table Relationships', summary:'Tables Summary', objects:'Objects' };
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function yn(v){ return v ? 'Yes' : 'No'; }
+function isYes(v){ return (v||'').toString().trim().toLowerCase()==='yes'; }
+function fmtNum(n){ return (n||0).toLocaleString(); }
+function shortName(name){ if(!name) return ''; const p=name.split('.'); return p.length>1? p[p.length-1] : name; }
+function objColor(type){
+  const t=(type||'').toUpperCase();
+  if(t==='PROCEDURE') return 'var(--accent)';
+  if(t==='VIEW') return 'var(--accent-view)';
+  return 'var(--text-dim)';
+}
+function toast(msg, isErr){
+  const host=document.getElementById('toastHost');
+  const el=document.createElement('div');
+  el.className='toast'+(isErr?' err':'');
+  el.textContent=msg;
+  host.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3200);
+}
+function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+
+/* ============================================================
+   FILE PARSING
+============================================================ */
+function findSheet(wb, wanted){
+  const key = wb.SheetNames.find(n => n.trim().toLowerCase() === wanted.toLowerCase());
+  return key ? XLSX.utils.sheet_to_json(wb.Sheets[key], {defval:''}) : [];
+}
+
+function parseFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, {type:'array'});
+        const lineage = findSheet(wb, SHEET_NAMES.lineage);
+        const relationships = findSheet(wb, SHEET_NAMES.rel);
+        const tablesSummary = findSheet(wb, SHEET_NAMES.summary);
+        const objects = findSheet(wb, SHEET_NAMES.objects);
+        if(!lineage.length && !relationships.length && !objects.length){
+          reject(new Error(`"${file.name}" doesn't look like a lineage export (expected sheets: Column Lineage, Table Relationships, Objects).`));
+          return;
+        }
+        resolve({ id:uid(), name:file.name, size:file.size, lineage, relationships, tablesSummary, objects });
+      }catch(err){ reject(err); }
+    };
+    reader.onerror = ()=>reject(new Error(`Could not read "${file.name}".`));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function handleFiles(fileListLike){
+  const arr = Array.from(fileListLike).filter(f=>/\.(xlsx|xls)$/i.test(f.name));
+  if(!arr.length){ toast('No .xlsx files found in your selection.', true); return; }
+  let okCount=0;
+  for(const f of arr){
+    try{
+      const parsed = await parseFile(f);
+      State.files.push(parsed);
+      okCount++;
+    }catch(err){ toast(err.message, true); }
+  }
+  if(okCount){
+    toast(`Loaded ${okCount} workbook${okCount>1?'s':''}.`);
+    rebuildAndRender();
+  }
+}
+
+function removeFile(id){
+  State.files = State.files.filter(f=>f.id!==id);
+  if(State.files.length===0){
+    State.model=null;
+    showEmptyState();
+    renderFileList();
+    return;
+  }
+  rebuildAndRender();
+  renderFileList();
+}
+
+/* ============================================================
+   SAMPLE DATA (mirrors the uploaded export's schema)
+============================================================ */
+function sampleWorkbookData(){
+  const lineage = [
+    ['dbo.SalesOrder','CustomerId','Join Key','Join Predicate','o.CustomerId = c.CustomerId','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.Customer','CustomerId','Join Key','Join Predicate','o.CustomerId = c.CustomerId','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.CustomerStatusLookup','StatusId','Join Key','Join Predicate','s.StatusId = c.StatusId','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','Yes','No'],
+    ['dbo.Customer','StatusId','Join Key','Join Predicate','s.StatusId = c.StatusId','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.Region','RegionId','Join Key','Join Predicate','r.RegionId = c.RegionId','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.Customer','RegionId','Join Key','Join Predicate','r.RegionId = c.RegionId','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.SalesOrder','OrderDate','Filter (WHERE)','Direct Mapping','o.OrderDate >= DATEADD(YEAR,-1,GETDATE())','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.Customer','IsDeleted','Filter (WHERE)','Direct Mapping','c.IsDeleted = 0','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.Customer','CustomerId','Group By','Direct Mapping','c.CustomerId','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.Customer','FirstName','Group By','Direct Mapping','c.FirstName','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.Customer','LastName','Group By','Direct Mapping','c.LastName','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.CustomerStatusLookup','StatusCode','Group By','Direct Mapping','s.StatusCode','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','Yes','No'],
+    ['dbo.Region','RegionName','Group By','Direct Mapping','r.RegionName','','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.Customer','CustomerId','Output (SELECT)','Direct Mapping','c.CustomerId','dbo.CustomerOrderSummary.CustomerId','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.SalesOrder','OrderId','Output (SELECT)','Aggregate (COUNT)','COUNT(o.OrderId)','dbo.CustomerOrderSummary.OrderCount','dbo.usp_LoadCustomerOrderSummary','PROCEDURE','INSERT/SELECT','No','No'],
+    ['dbo.ShipmentLine','SkuId','Join Key','Join Predicate','sl.SkuId = il.SkuId','','dbo.usp_ReconcileInventoryLevels','PROCEDURE','UPDATE','No','No'],
+    ['dbo.InventoryLevel','SkuId','Join Key','Join Predicate','sl.SkuId = il.SkuId','','dbo.usp_ReconcileInventoryLevels','PROCEDURE','UPDATE','No','No'],
+    ['dbo.ShipmentLine','WarehouseId','Join Key','Join Predicate','sl.WarehouseId = il.WarehouseId','','dbo.usp_ReconcileInventoryLevels','PROCEDURE','UPDATE','No','No'],
+    ['dbo.InventoryLevel','WarehouseId','Join Key','Join Predicate','sl.WarehouseId = il.WarehouseId','','dbo.usp_ReconcileInventoryLevels','PROCEDURE','UPDATE','No','No'],
+    ['dbo.ProductCategoryLookup','CategoryId','Join Key','Join Predicate','pc.CategoryId = sl.CategoryId','','dbo.usp_ReconcileInventoryLevels','PROCEDURE','UPDATE','Yes','No'],
+    ['dbo.ShipmentLine','CategoryId','Join Key','Join Predicate','pc.CategoryId = sl.CategoryId','','dbo.usp_ReconcileInventoryLevels','PROCEDURE','UPDATE','No','No'],
+    ['dbo.InventoryAudit','AuditId','Output (INSERT)','Direct Mapping','NEWID()','dbo.InventoryAudit.AuditId','dbo.usp_ReconcileInventoryLevels','PROCEDURE','INSERT/SELECT','No','No'],
+    ['#TempReconciled','SkuId','Output (INSERT)','Direct Mapping','il.SkuId','#TempReconciled.SkuId','dbo.usp_ReconcileInventoryLevels','PROCEDURE','INSERT/SELECT','No','Yes'],
+    ['dbo.Customer','CustomerId','Output (SELECT)','Direct Mapping','c.CustomerId','','dbo.vw_ActiveCustomers','VIEW','SELECT','No','No'],
+    ['dbo.Region','RegionId','Join Key','Join Predicate','r.RegionId = c.RegionId','','dbo.vw_ActiveCustomers','VIEW','SELECT','No','No'],
+    ['dbo.Customer','RegionId','Join Key','Join Predicate','r.RegionId = c.RegionId','','dbo.vw_ActiveCustomers','VIEW','SELECT','No','No'],
+    ['dbo.CountryLookup','CountryId','Join Key','Join Predicate','cl.CountryId = r.CountryId','','dbo.vw_ActiveCustomers','VIEW','SELECT','Yes','No'],
+    ['dbo.Region','CountryId','Join Key','Join Predicate','cl.CountryId = r.CountryId','','dbo.vw_ActiveCustomers','VIEW','SELECT','No','No'],
+    ['dbo.Customer','IsDeleted','Filter (WHERE)','Direct Mapping','c.IsDeleted = 0','','dbo.vw_ActiveCustomers','VIEW','SELECT','No','No'],
+    ['dbo.Product','ProductId','Output (SELECT)','Direct Mapping','p.ProductId','','dbo.vw_ProductMargins','VIEW','SELECT','No','No'],
+    ['dbo.Product','CategoryId','Join Key','Join Predicate','pc.CategoryId = p.CategoryId','','dbo.vw_ProductMargins','VIEW','SELECT','No','No'],
+    ['dbo.ProductCategoryLookup','CategoryId','Join Key','Join Predicate','pc.CategoryId = p.CategoryId','','dbo.vw_ProductMargins','VIEW','SELECT','Yes','No'],
+    ['dbo.Product','UnitCost','Output (SELECT)','Calculated','p.UnitPrice - p.UnitCost','','dbo.vw_ProductMargins','VIEW','SELECT','No','No'],
+    ['dbo.Product','UnitPrice','Output (SELECT)','Calculated','p.UnitPrice - p.UnitCost','','dbo.vw_ProductMargins','VIEW','SELECT','No','No'],
+  ];
+  const relationships = [
+    ['dbo.SalesOrder','CustomerId','dbo.Customer','CustomerId','dbo.usp_LoadCustomerOrderSummary'],
+    ['dbo.CustomerStatusLookup','StatusId','dbo.Customer','StatusId','dbo.usp_LoadCustomerOrderSummary'],
+    ['dbo.Region','RegionId','dbo.Customer','RegionId','dbo.usp_LoadCustomerOrderSummary'],
+    ['dbo.ShipmentLine','SkuId','dbo.InventoryLevel','SkuId','dbo.usp_ReconcileInventoryLevels'],
+    ['dbo.ShipmentLine','WarehouseId','dbo.InventoryLevel','WarehouseId','dbo.usp_ReconcileInventoryLevels'],
+    ['dbo.ProductCategoryLookup','CategoryId','dbo.ShipmentLine','CategoryId','dbo.usp_ReconcileInventoryLevels'],
+    ['dbo.Region','RegionId','dbo.Customer','RegionId','dbo.vw_ActiveCustomers'],
+    ['dbo.CountryLookup','CountryId','dbo.Region','CountryId','dbo.vw_ActiveCustomers'],
+    ['dbo.ProductCategoryLookup','CategoryId','dbo.Product','CategoryId','dbo.vw_ProductMargins'],
+  ];
+  const objects = [
+    ['dbo.usp_LoadCustomerOrderSummary','PROCEDURE','dbo.CustomerOrderSummary, dbo.Customer, dbo.SalesOrder, dbo.CustomerStatusLookup, dbo.Region', 15],
+    ['dbo.usp_ReconcileInventoryLevels','PROCEDURE','dbo.InventoryLevel, dbo.ShipmentLine, dbo.InventoryAudit, dbo.ProductCategoryLookup, #TempReconciled', 8],
+    ['dbo.vw_ActiveCustomers','VIEW','dbo.Customer, dbo.Region, dbo.CountryLookup', 6],
+    ['dbo.vw_ProductMargins','VIEW','dbo.Product, dbo.ProductCategoryLookup', 5],
+  ];
+  const lh=['Table','Column','Usage','Transformation','Expression','Maps To','Source Object','Object Type','Statement Type','Is Lookup Table','Is Temp Table'];
+  const rh=['Table A','Column A','Table B','Column B','Source Object'];
+  const oh=['Object Name','Type','Tables Referenced','Lineage Rows'];
+  const toObjs = (hdr,rows)=>rows.map(r=>{ const o={}; hdr.forEach((h,i)=>o[h]=r[i]); return o; });
+  return {
+    lineage: toObjs(lh,lineage),
+    relationships: toObjs(rh,relationships),
+    objects: toObjs(oh,objects),
+    tablesSummary: []
+  };
+}
+
+function loadSample(){
+  const d = sampleWorkbookData();
+  State.files.push({ id:uid(), name:'sample_lineage_export.xlsx', size:0, ...d });
+  toast('Sample workbook loaded.');
+  rebuildAndRender();
+}
+
+/* ============================================================
+   MODEL BUILDING (merge across all loaded files)
+============================================================ */
+function buildModel(){
+  const lineage=[], relationships=[];
+  const objectsMap=new Map();
+  const tables=new Map();
+  const seenL=new Set(), seenR=new Set();
+
+  State.files.forEach(f=>{
+    (f.lineage||[]).forEach(r=>{
+      const table=(r['Table']||'').toString().trim();
+      if(!table) return;
+      const key=[table,r['Column'],r['Usage'],r['Expression'],r['Source Object'],r['Statement Type']].join('|');
+      if(seenL.has(key)) return; seenL.add(key);
+      lineage.push({
+        table, column:(r['Column']||'').toString().trim(), usage:(r['Usage']||'').toString().trim()||'Reference',
+        transformation:(r['Transformation']||'').toString().trim(), expression:(r['Expression']||'').toString().trim(),
+        mapsTo:(r['Maps To']||'').toString().trim(), sourceObject:(r['Source Object']||'').toString().trim(),
+        objectType:(r['Object Type']||'').toString().trim().toUpperCase(), statementType:(r['Statement Type']||'').toString().trim(),
+        isLookup:isYes(r['Is Lookup Table']), isTemp:isYes(r['Is Temp Table'])
+      });
+    });
+    (f.relationships||[]).forEach(r=>{
+      const a=(r['Table A']||'').toString().trim(), b=(r['Table B']||'').toString().trim();
+      if(!a||!b) return;
+      const key=[a,r['Column A'],b,r['Column B'],r['Source Object']].join('|');
+      if(seenR.has(key)) return; seenR.add(key);
+      relationships.push({ tableA:a, columnA:(r['Column A']||'').toString().trim(), tableB:b, columnB:(r['Column B']||'').toString().trim(), sourceObject:(r['Source Object']||'').toString().trim() });
+    });
+    (f.objects||[]).forEach(r=>{
+      const name=(r['Object Name']||'').toString().trim();
+      if(!name) return;
+      const refs=(r['Tables Referenced']||'').toString().split(',').map(s=>s.trim()).filter(Boolean);
+      const existing = objectsMap.get(name);
+      objectsMap.set(name, {
+        name, type:(r['Type']||existing?.type||'OBJECT').toString().trim().toUpperCase(),
+        tablesReferenced: existing ? Array.from(new Set([...existing.tablesReferenced, ...refs])) : refs,
+        lineageRows: (existing?existing.lineageRows:0) + (Number(r['Lineage Rows'])||0)
+      });
+    });
+  });
+
+  lineage.forEach(r=>{
+    if(r.sourceObject && !objectsMap.has(r.sourceObject)){
+      objectsMap.set(r.sourceObject, {name:r.sourceObject, type:r.objectType||'OBJECT', tablesReferenced:[], lineageRows:0});
+    }
+  });
+  relationships.forEach(r=>{
+    if(r.sourceObject && !objectsMap.has(r.sourceObject)){
+      objectsMap.set(r.sourceObject, {name:r.sourceObject, type:'OBJECT', tablesReferenced:[], lineageRows:0});
+    }
+  });
+
+  function ensureTable(name){
+    if(!name) return null;
+    if(!tables.has(name)) tables.set(name, {name, isLookup:false, isTemp:false, columns:new Map(), objects:new Set(), joins:0});
+    return tables.get(name);
+  }
+  lineage.forEach(r=>{
+    const t=ensureTable(r.table); if(!t) return;
+    if(r.isLookup) t.isLookup=true;
+    if(r.isTemp || r.table.startsWith('#')) t.isTemp=true;
+    if(r.sourceObject) t.objects.add(r.sourceObject);
+    if(r.column){
+      if(!t.columns.has(r.column)) t.columns.set(r.column, []);
+      t.columns.get(r.column).push({ usage:r.usage, statementType:r.statementType, sourceObject:r.sourceObject, objectType:r.objectType, expression:r.expression, mapsTo:r.mapsTo });
+    }
+  });
+  relationships.forEach(r=>{
+    const ta=ensureTable(r.tableA), tb=ensureTable(r.tableB);
+    if(ta){ ta.joins++; if(r.sourceObject) ta.objects.add(r.sourceObject); }
+    if(tb){ tb.joins++; if(r.sourceObject) tb.objects.add(r.sourceObject); }
+  });
+
+  return { lineage, relationships, objects:objectsMap, tables };
+}
+
+function rebuildAndRender(){
+  State.model = buildModel();
+  State.lineagePage = 1;
+  document.getElementById('sourceCountPill').classList.remove('hidden');
+  document.getElementById('sourceCountPill').textContent = `${State.files.length} source${State.files.length>1?'s':''} loaded`;
+  document.getElementById('tabbar').classList.remove('hidden');
+  document.getElementById('filterbar').classList.remove('hidden');
+  document.getElementById('emptyState').classList.add('hidden');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('hidden'));
+  document.querySelectorAll('.tab-panel').forEach(p=> p.id==='panel-'+State.activeTab ? null : p.classList.add('hidden'));
+  buildFilterOptions();
+  renderAll();
+  renderFileList();
+}
+
+function showEmptyState(){
+  document.getElementById('sourceCountPill').classList.add('hidden');
+  document.getElementById('tabbar').classList.add('hidden');
+  document.getElementById('filterbar').classList.add('hidden');
+  document.getElementById('emptyState').classList.remove('hidden');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
+}
+
+/* ============================================================
+   FILTERED DATA HELPERS
+============================================================ */
+function matchesFilters(row){
+  const f=State.filters;
+  if(f.objects.size && !f.objects.has(row.sourceObject)) return false;
+  if(f.tables.size && !f.tables.has(row.table)) return false;
+  if(f.usage.size && !f.usage.has(row.usage)) return false;
+  if(f.search){
+    const s=f.search.toLowerCase();
+    const hay=[row.table,row.column,row.usage,row.transformation,row.expression,row.mapsTo,row.sourceObject,row.statementType].join(' ').toLowerCase();
+    if(!hay.includes(s)) return false;
+  }
+  return true;
+}
+function getFilteredLineage(){ return State.model.lineage.filter(matchesFilters); }
+
+/* ============================================================
+   MULTI-SELECT FILTER COMPONENT
+============================================================ */
+function buildFilterOptions(){
+  const m=State.model;
+  const objOpts = Array.from(m.objects.values()).map(o=>({value:o.name,label:shortName(o.name),count:m.lineage.filter(r=>r.sourceObject===o.name).length,color:objColor(o.type)}));
+  const tblOpts = Array.from(m.tables.values()).map(t=>({value:t.name,label:shortName(t.name),count:m.lineage.filter(r=>r.table===t.name).length,color: t.isTemp?'var(--accent-temp)': t.isLookup?'var(--accent-lookup)':'var(--accent-table)'}));
+  const usageSet = new Set(m.lineage.map(r=>r.usage));
+  const usageOpts = Array.from(usageSet).sort().map(u=>({value:u,label:u,count:m.lineage.filter(r=>r.usage===u).length,color:'var(--text-dim)'}));
+
+  mountMultiSelect('mselObjects', 'Object', objOpts, State.filters.objects, ()=>{ onFilterChange(); });
+  mountMultiSelect('mselTables', 'Table', tblOpts, State.filters.tables, ()=>{ onFilterChange(); });
+  mountMultiSelect('mselUsage', 'Usage type', usageOpts, State.filters.usage, ()=>{ onFilterChange(); });
+}
+
+function mountMultiSelect(containerId, label, options, selectedSet, onChange){
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.className = 'msel-btn';
+  const panel = document.createElement('div');
+  panel.className = 'msel-panel';
+
+  function refreshBtn(){
+    const n = selectedSet.size;
+    btn.classList.toggle('has-filter', n>0);
+    btn.innerHTML = `<span>${label}${n?` · ${n}`:''}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>`;
+  }
+
+  panel.innerHTML = `
+    <div class="msel-search"><input type="text" placeholder="Filter ${label.toLowerCase()}s…"></div>
+    <div class="msel-actions"><button data-a="all">Select all</button><button data-a="none">Clear</button></div>
+    <div class="msel-list"></div>`;
+  const listEl = panel.querySelector('.msel-list');
+  const searchEl = panel.querySelector('.msel-search input');
+
+  function renderOpts(filterText){
+    listEl.innerHTML='';
+    options
+      .filter(o=>!filterText || o.label.toLowerCase().includes(filterText.toLowerCase()))
+      .forEach(o=>{
+        const row=document.createElement('label');
+        row.className='msel-opt';
+        row.innerHTML = `<input type="checkbox" ${selectedSet.has(o.value)?'checked':''}><span class="dot" style="background:${o.color}"></span><span class="lbl">${esc(o.label)}</span><span class="cnt">${o.count}</span>`;
+        row.querySelector('input').addEventListener('change', (e)=>{
+          if(e.target.checked) selectedSet.add(o.value); else selectedSet.delete(o.value);
+          refreshBtn(); onChange();
+        });
+        listEl.appendChild(row);
+      });
+  }
+  renderOpts('');
+  searchEl.addEventListener('input', ()=>renderOpts(searchEl.value));
+  panel.querySelector('[data-a="all"]').addEventListener('click', ()=>{ options.forEach(o=>selectedSet.add(o.value)); renderOpts(searchEl.value); refreshBtn(); onChange(); });
+  panel.querySelector('[data-a="none"]').addEventListener('click', ()=>{ selectedSet.clear(); renderOpts(searchEl.value); refreshBtn(); onChange(); });
+
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    document.querySelectorAll('.msel-panel.open').forEach(p=>{ if(p!==panel) p.classList.remove('open'); });
+    panel.classList.toggle('open');
+  });
+  refreshBtn();
+  container.appendChild(btn);
+  container.appendChild(panel);
+}
+
+document.addEventListener('click', (e)=>{
+  if(!e.target.closest('.msel')) document.querySelectorAll('.msel-panel.open').forEach(p=>p.classList.remove('open'));
+});
+
+function onFilterChange(){
+  updateClearFiltersVisibility();
+  State.lineagePage = 1;
+  renderAll();
+}
+function updateClearFiltersVisibility(){
+  const f=State.filters;
+  const active = f.search || f.objects.size || f.tables.size || f.usage.size;
+  document.getElementById('clearFilters').classList.toggle('hidden', !active);
+}
+document.getElementById('clearFilters').addEventListener('click', ()=>{
+  State.filters.search=''; State.filters.objects.clear(); State.filters.tables.clear(); State.filters.usage.clear();
+  document.getElementById('globalSearch').value='';
+  buildFilterOptions();
+  onFilterChange();
+});
+document.getElementById('globalSearch').addEventListener('input', debounce((e)=>{
+  State.filters.search = e.target.value.trim();
+  onFilterChange();
+}, 200));
+
+/* ============================================================
+   TABS
+============================================================ */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    State.activeTab = tab.dataset.tab;
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.add('hidden'));
+    document.getElementById('panel-'+State.activeTab).classList.remove('hidden');
+    if(State.activeTab==='diagram') renderDiagram();
+  });
+});
+
+/* ============================================================
+   RENDER: ALL
+============================================================ */
+function renderAll(){
+  document.getElementById('cntLineage').textContent = fmtNum(getFilteredLineage().length);
+  document.getElementById('cntTables').textContent = fmtNum(State.model.tables.size);
+  renderDashboard();
+  renderLineageTable();
+  renderMatrix();
+  if(State.activeTab==='diagram') renderDiagram();
+}
+
+/* ---------------- DASHBOARD ---------------- */
+function renderDashboard(){
+  const m = State.model;
+  const procs = Array.from(m.objects.values()).filter(o=>o.type==='PROCEDURE').length;
+  const views = Array.from(m.objects.values()).filter(o=>o.type==='VIEW').length;
+  const lookupTables = Array.from(m.tables.values()).filter(t=>t.isLookup).length;
+  const tempTables = Array.from(m.tables.values()).filter(t=>t.isTemp).length;
+  let distinctColPairs = 0; m.tables.forEach(t=>distinctColPairs+=t.columns.size);
+
+  const kpis = [
+    {label:'Objects analyzed', val:m.objects.size, color:'var(--accent)'},
+    {label:'Stored procedures', val:procs, color:'var(--accent)'},
+    {label:'Views', val:views, color:'var(--accent-view)'},
+    {label:'Tables referenced', val:m.tables.size, color:'var(--accent-table)'},
+    {label:'Lookup tables', val:lookupTables, color:'var(--accent-lookup)'},
+    {label:'Temp tables / vars', val:tempTables, color:'var(--accent-temp)'},
+    {label:'Distinct table.columns', val:distinctColPairs, color:'var(--accent)'},
+    {label:'Join relationships', val:m.relationships.length, color:'var(--accent-table)'},
+    {label:'Lineage rows', val:m.lineage.length, color:'var(--text-dim)'},
+    {label:'Files merged', val:State.files.length, color:'var(--text-dim)'},
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k=>`
+    <div class="kpi-card" style="--accent-color:${k.color}">
+      <div class="kpi-val">${fmtNum(k.val)}</div>
+      <div class="kpi-lbl">${esc(k.label)}</div>
+    </div>`).join('');
+
+  // objects overview table
+  const objRows = Array.from(m.objects.values()).sort((a,b)=>a.name.localeCompare(b.name));
+  const table = document.getElementById('objectsTable');
+  table.innerHTML = `
+    <thead><tr>
+      <th>Object</th><th>Type</th><th>Tables referenced</th><th>Lineage rows</th>
+    </tr></thead>
+    <tbody>
+      ${objRows.map(o=>`
+        <tr>
+          <td class="mono" style="color:var(--text)">${esc(o.name)}</td>
+          <td>${badgeForType(o.type)}</td>
+          <td>${o.tablesReferenced.length ? o.tablesReferenced.map(t=>`<span class="chip">${esc(shortName(t))}</span>`).join(' ') : `<span style="color:var(--text-faint)">—</span>`}</td>
+          <td class="mono">${fmtNum(o.lineageRows || m.lineage.filter(r=>r.sourceObject===o.name).length)}</td>
+        </tr>`).join('')}
+    </tbody>`;
+
+  // top tables chart
+  const tblRows = Array.from(m.tables.values()).map(t=>({name:t.name,count:t.objects.size})).sort((a,b)=>b.count-a.count).slice(0,10);
+  const maxCount = Math.max(1, ...tblRows.map(t=>t.count));
+  document.getElementById('topTablesChart').innerHTML = tblRows.map(t=>`
+    <div class="barrow">
+      <span class="name">${esc(shortName(t.name))}</span>
+      <span class="track"><span class="fill" style="width:${(t.count/maxCount*100).toFixed(1)}%"></span></span>
+      <span class="val">${t.count}</span>
+    </div>`).join('') || `<p style="color:var(--text-faint);font-size:12.5px">No table usage data yet.</p>`;
+}
+
+function badgeForType(type){
+  const t=(type||'').toUpperCase();
+  if(t==='PROCEDURE') return `<span class="badge badge-proc">PROC</span>`;
+  if(t==='VIEW') return `<span class="badge badge-view">VIEW</span>`;
+  return `<span class="badge badge-neutral">${esc(t||'OBJECT')}</span>`;
+}
+function badgeForUsage(u){ return `<span class="badge badge-neutral">${esc(u)}</span>`; }
+
+/* ---------------- LINEAGE TABLE ---------------- */
+const LINEAGE_COLS = [
+  {key:'sourceObject', label:'Object'},
+  {key:'objectType', label:'Type'},
+  {key:'table', label:'Table'},
+  {key:'column', label:'Column'},
+  {key:'usage', label:'Usage'},
+  {key:'statementType', label:'Statement'},
+  {key:'transformation', label:'Transformation'},
+  {key:'expression', label:'Expression'},
+  {key:'isLookup', label:'Lookup'},
+  {key:'isTemp', label:'Temp'},
+];
+
+function renderLineageTable(){
+  const rows = getFilteredLineage().slice().sort((a,b)=>{
+    const {key,dir}=State.lineageSort;
+    const av=a[key], bv=b[key];
+    if(typeof av==='boolean') return (av===bv?0:av?1:-1)*dir;
+    return String(av).localeCompare(String(bv))*dir;
+  });
+  const total = rows.length;
+  const pageSize = State.pageSize;
+  const totalPages = Math.max(1, Math.ceil(total/pageSize));
+  if(State.lineagePage>totalPages) State.lineagePage=totalPages;
+  const start = (State.lineagePage-1)*pageSize;
+  const pageRows = rows.slice(start, start+pageSize);
+
+  const table = document.getElementById('lineageTable');
+  table.innerHTML = `
+    <thead><tr>
+      ${LINEAGE_COLS.map(c=>`<th data-key="${c.key}" class="${State.lineageSort.key===c.key?'sorted':''}">${c.label}<span class="arrow">${State.lineageSort.dir===1?'▲':'▼'}</span></th>`).join('')}
+    </tr></thead>
+    <tbody>
+      ${pageRows.length ? pageRows.map(r=>`
+        <tr>
+          <td class="mono" style="color:var(--text)">${esc(shortName(r.sourceObject))}</td>
+          <td>${badgeForType(r.objectType)}</td>
+          <td class="mono">${esc(shortName(r.table))}</td>
+          <td class="mono" style="color:var(--text)">${esc(r.column)}</td>
+          <td>${badgeForUsage(r.usage)}</td>
+          <td>${esc(r.statementType)}</td>
+          <td>${esc(r.transformation)}</td>
+          <td class="expr-cell">${esc(r.expression)}</td>
+          <td class="${r.isLookup?'flag-yes':'flag-no'}">${yn(r.isLookup)}</td>
+          <td class="${r.isTemp?'flag-yes':'flag-no'}">${yn(r.isTemp)}</td>
+        </tr>`).join('') : `<tr><td colspan="${LINEAGE_COLS.length}" style="text-align:center;padding:30px;color:var(--text-faint)">No rows match the current filters.</td></tr>`}
+    </tbody>`;
+
+  table.querySelectorAll('thead th').forEach(th=>{
+    th.addEventListener('click', ()=>{
+      const key=th.dataset.key;
+      if(State.lineageSort.key===key) State.lineageSort.dir*=-1;
+      else State.lineageSort={key, dir:1};
+      renderLineageTable();
+    });
+  });
+
+  document.getElementById('lineageInfo').textContent = total ? `Showing ${start+1}–${Math.min(start+pageSize,total)} of ${fmtNum(total)} rows` : '0 rows';
+  renderPager(totalPages);
+}
+
+function renderPager(totalPages){
+  const pager = document.getElementById('lineagePager');
+  const p = State.lineagePage;
+  pager.innerHTML = `
+    <button ${p<=1?'disabled':''} data-p="1">«</button>
+    <button ${p<=1?'disabled':''} data-p="${p-1}">‹</button>
+    <span style="font-size:12px;color:var(--text-dim);padding:0 8px;font-family:var(--mono)">${p} / ${totalPages}</span>
+    <button ${p>=totalPages?'disabled':''} data-p="${p+1}">›</button>
+    <button ${p>=totalPages?'disabled':''} data-p="${totalPages}">»</button>`;
+  pager.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{ State.lineagePage=Number(b.dataset.p); renderLineageTable(); }));
+}
+document.getElementById('pageSizeSel').addEventListener('change', (e)=>{ State.pageSize=Number(e.target.value); State.lineagePage=1; renderLineageTable(); });
+
+/* ---------------- MATRIX ---------------- */
+function renderMatrix(){
+  const m = State.model;
+  const host = document.getElementById('matrixHost');
+  const f = State.filters;
+  let tableNames = Array.from(m.tables.keys()).sort();
+  if(f.tables.size) tableNames = tableNames.filter(t=>f.tables.has(t));
+  if(f.search){
+    const s=f.search.toLowerCase();
+    tableNames = tableNames.filter(t=>{
+      if(t.toLowerCase().includes(s)) return true;
+      const tbl=m.tables.get(t);
+      return Array.from(tbl.columns.keys()).some(c=>c.toLowerCase().includes(s));
+    });
+  }
+
+  if(!tableNames.length){ host.innerHTML = `<p style="color:var(--text-faint);font-size:12.5px">No tables match the current filters.</p>`; return; }
+
+  host.innerHTML = tableNames.map(tname=>{
+    const t = m.tables.get(tname);
+    let cols = Array.from(t.columns.keys()).sort();
+    if(f.objects.size) cols = cols.filter(c=> t.columns.get(c).some(u=>f.objects.has(u.sourceObject)) );
+    if(f.usage.size) cols = cols.filter(c=> t.columns.get(c).some(u=>f.usage.has(u.usage)) );
+    if(!cols.length) return '';
+    const badges = [];
+    if(t.isLookup) badges.push(`<span class="badge badge-lookup">LOOKUP</span>`);
+    if(t.isTemp) badges.push(`<span class="badge badge-temp">TEMP</span>`);
+    return `
+    <div class="matrix-group" data-id="${esc(tname)}">
+      <div class="matrix-head">
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 6l6 6-6 6"/></svg>
+        <span class="tname">${esc(tname)}</span>
+        ${badges.join('')}
+        <span class="meta">
+          <span class="badge badge-neutral">${cols.length} cols</span>
+          <span class="badge badge-neutral">${t.objects.size} objects</span>
+        </span>
+      </div>
+      <div class="matrix-body">
+        ${cols.map(c=>{
+          let usages = t.columns.get(c);
+          if(f.objects.size) usages = usages.filter(u=>f.objects.has(u.sourceObject));
+          if(f.usage.size) usages = usages.filter(u=>f.usage.has(u.usage));
+          return `
+          <div class="matrix-col-row">
+            <span class="cname">${esc(c)}</span>
+            <div class="matrix-chips">
+              ${usages.map(u=>`<span class="chip">${esc(shortName(u.sourceObject))} <span class="u">${esc(u.usage)}</span></span>`).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  host.querySelectorAll('.matrix-head').forEach(h=>{
+    h.addEventListener('click', ()=> h.parentElement.classList.toggle('open'));
+  });
+}
+
+/* ============================================================
+   ER DIAGRAM (d3-force)
+============================================================ */
+let zoomBehavior=null, svgSel=null, gSel=null;
+
+function buildGraphData(){
+  const m = State.model;
+  const f = State.filters;
+  const nodes = [];
+  const nodeIds = new Set();
+
+  let objNames = Array.from(m.objects.keys());
+  if(f.objects.size) objNames = objNames.filter(n=>f.objects.has(n));
+
+  objNames.forEach(name=>{
+    const o = m.objects.get(name);
+    nodes.push({ id:'obj:'+name, kind:'object', label:shortName(name), fullName:name, objType:o.type });
+    nodeIds.add('obj:'+name);
+  });
+
+  let tableNames = Array.from(m.tables.keys());
+  if(f.tables.size) tableNames = tableNames.filter(t=>f.tables.has(t));
+  // include tables referenced by visible objects even if not in explicit filter set, when no explicit table filter chosen
+  if(!f.tables.size && f.objects.size){
+    const rel = new Set();
+    m.lineage.forEach(r=>{ if(objNames.includes(r.sourceObject)) rel.add(r.table); });
+    m.relationships.forEach(r=>{ if(objNames.includes(r.sourceObject)){ rel.add(r.tableA); rel.add(r.tableB);} });
+    tableNames = Array.from(rel);
+  }
+
+  tableNames.forEach(name=>{
+    const t = m.tables.get(name);
+    if(!t) return;
+    nodes.push({ id:'tbl:'+name, kind:'table', label:shortName(name), fullName:name, isLookup:t.isLookup, isTemp:t.isTemp });
+    nodeIds.add('tbl:'+name);
+  });
+
+  const links = [];
+  const linkKey = new Set();
+
+  if(State.diagram.showJoins){
+    m.relationships.forEach(r=>{
+      if(f.objects.size && !f.objects.has(r.sourceObject)) return;
+      const a='tbl:'+r.tableA, b='tbl:'+r.tableB;
+      if(!nodeIds.has(a) || !nodeIds.has(b)) return;
+      const key='join|'+a+'|'+b+'|'+r.columnA+'|'+r.columnB;
+      if(linkKey.has(key)) return; linkKey.add(key);
+      links.push({ source:a, target:b, type:'join', label:`${r.columnA} = ${r.columnB}`, via:r.sourceObject });
+    });
+  }
+  if(State.diagram.showUsage){
+    const seen = new Set();
+    m.lineage.forEach(r=>{
+      if(f.objects.size && !f.objects.has(r.sourceObject)) return;
+      const o='obj:'+r.sourceObject, t='tbl:'+r.table;
+      if(!nodeIds.has(o) || !nodeIds.has(t)) return;
+      const key='use|'+o+'|'+t;
+      if(seen.has(key)) return; seen.add(key);
+      links.push({ source:o, target:t, type:'usage', label:'uses' });
+    });
+  }
+  return { nodes, links };
+}
+
+function colorForNode(n){
+  if(n.kind==='object'){
+    return n.objType==='VIEW' ? '#B58CF5' : '#35D7BE';
+  }
+  if(n.isTemp) return '#FF7A6E';
+  if(n.isLookup) return '#F2A93B';
+  return '#5B9BFF';
+}
+
+function renderDiagram(){
+  const host = document.getElementById('diagramSvgHost');
+  host.innerHTML = '';
+  const width = host.clientWidth || 900;
+  const height = host.clientHeight || 640;
+
+  const {nodes, links} = buildGraphData();
+
+  const svg = d3.select(host).append('svg')
+    .attr('width', '100%').attr('height', '100%')
+    .attr('viewBox', [0,0,width,height])
+    .style('background', '#0D1219');
+  svgSel = svg;
+
+  // arrow marker
+  svg.append('defs').append('marker')
+    .attr('id','arrowhead').attr('viewBox','0 -5 10 10').attr('refX',22).attr('refY',0)
+    .attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+    .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#3A4657');
+
+  const g = svg.append('g');
+  gSel = g;
+
+  if(!nodes.length){
+    g.append('text').attr('x',width/2).attr('y',height/2).attr('text-anchor','middle')
+      .attr('fill','#57657A').attr('font-family','Inter').attr('font-size',13)
+      .text('No nodes to display — adjust filters or toggle edge types.');
+    return;
+  }
+
+  const linkSel = g.append('g').attr('stroke-linecap','round').selectAll('line')
+    .data(links).join('line')
+    .attr('stroke', d=> d.type==='join' ? '#5B9BFF' : '#3A4657')
+    .attr('stroke-width', d=> d.type==='join' ? 1.8 : 1.2)
+    .attr('stroke-dasharray', d=> d.type==='usage' ? '3,4' : null)
+    .attr('marker-end', d=> d.type==='usage' ? 'url(#arrowhead)' : null)
+    .attr('opacity', 0.85);
+
+  const linkLabelSel = g.append('g').selectAll('text')
+    .data(links).join('text')
+    .attr('font-family','var(--mono)').attr('font-size',9).attr('fill','#5C6B80')
+    .attr('text-anchor','middle').text(d=>d.label||'')
+    .style('display', State.diagram.showLabels ? null : 'none');
+
+  const nodeSel = g.append('g').selectAll('g.node')
+    .data(nodes).join('g').attr('class','node')
+    .style('cursor','pointer')
+    .call(d3.drag()
+      .on('start', (event,d)=>{ if(!event.active) sim.alphaTarget(0.25).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag', (event,d)=>{ d.fx=event.x; d.fy=event.y; })
+      .on('end', (event,d)=>{ if(!event.active) sim.alphaTarget(0); }));
+
+  nodeSel.each(function(d){
+    const sel = d3.select(this);
+    const color = colorForNode(d);
+    const w = Math.max(88, d.label.length*7.2 + 34);
+    const h = 38;
+    d._w=w; d._h=h;
+    if(d.kind==='object'){
+      sel.append('rect').attr('x',-w/2).attr('y',-h/2).attr('width',w).attr('height',h)
+        .attr('rx',10).attr('fill','#131A24').attr('stroke',color).attr('stroke-width',1.8);
+      sel.append('circle').attr('cx',-w/2+14).attr('cy',0).attr('r',4).attr('fill',color);
+    } else {
+      sel.append('rect').attr('x',-w/2).attr('y',-h/2).attr('width',w).attr('height',h)
+        .attr('rx', d.isTemp?18:3).attr('fill','#131A24')
+        .attr('stroke',color).attr('stroke-width',1.6)
+        .attr('stroke-dasharray', d.isTemp ? '4,3' : null);
+    }
+    sel.append('text').attr('text-anchor','middle').attr('dy','0.32em')
+      .attr('font-family','var(--mono)').attr('font-size',11).attr('font-weight',600)
+      .attr('fill','#E7ECF3').text(d.label.length>18 ? d.label.slice(0,17)+'…' : d.label);
+  });
+
+  nodeSel.on('click', (event,d)=>{
+    event.stopPropagation();
+    State.diagram.selected = d.id;
+    highlightSelection(d);
+    showNodeDetail(d);
+  });
+  svg.on('click', ()=>{ State.diagram.selected=null; highlightSelection(null); showNodeDetail(null); });
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d=>d.id).distance(d=> d.type==='join'?150:190).strength(0.55))
+    .force('charge', d3.forceManyBody().strength(-620))
+    .force('center', d3.forceCenter(width/2, height/2))
+    .force('collide', d3.forceCollide().radius(60));
+  State.diagram.sim = sim;
+
+  sim.on('tick', ()=>{
+    linkSel.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    linkLabelSel.attr('x',d=>(d.source.x+d.target.x)/2).attr('y',d=>(d.source.y+d.target.y)/2 - 4);
+    nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+
+  zoomBehavior = d3.zoom().scaleExtent([0.15,4]).on('zoom', (event)=>{ g.attr('transform', event.transform); });
+  svg.call(zoomBehavior);
+
+  function highlightSelection(d){
+    if(!d){
+      nodeSel.attr('opacity',1); linkSel.attr('opacity',0.85);
+      return;
+    }
+    const connected = new Set([d.id]);
+    links.forEach(l=>{ const s=l.source.id||l.source, t=l.target.id||l.target; if(s===d.id) connected.add(t); if(t===d.id) connected.add(s); });
+    nodeSel.attr('opacity', n=> connected.has(n.id) ? 1 : 0.15);
+    linkSel.attr('opacity', l=>{ const s=l.source.id||l.source, t=l.target.id||l.target; return (s===d.id||t===d.id) ? 1 : 0.06; });
+  }
+}
+
+function showNodeDetail(d){
+  const el = document.getElementById('nodeDetail');
+  if(!d){ el.innerHTML = `<h4>Selection</h4><p class="nd-empty">Click a node to inspect its connections.</p>`; return; }
+  const m = State.model;
+  if(d.kind==='object'){
+    const rows = m.lineage.filter(r=>r.sourceObject===d.fullName);
+    const tables = Array.from(new Set(rows.map(r=>r.table)));
+    el.innerHTML = `<h4>${d.objType}</h4><div class="nd-name">${esc(d.fullName)}</div>
+      <p style="color:var(--text-faint);margin:0 0 6px">References ${tables.length} table${tables.length!==1?'s':''}:</p>
+      <ul>${tables.map(t=>`<li>${esc(shortName(t))}</li>`).join('')}</ul>`;
+  } else {
+    const t = m.tables.get(d.fullName);
+    el.innerHTML = `<h4>Table${t.isLookup?' · Lookup':''}${t.isTemp?' · Temp':''}</h4><div class="nd-name">${esc(d.fullName)}</div>
+      <p style="color:var(--text-faint);margin:0 0 6px">Used by ${t.objects.size} object${t.objects.size!==1?'s':''}:</p>
+      <ul>${Array.from(t.objects).map(o=>`<li>${esc(shortName(o))}</li>`).join('')}</ul>`;
+  }
+}
+
+document.getElementById('toggleUsage').addEventListener('change', (e)=>{ State.diagram.showUsage=e.target.checked; renderDiagram(); });
+document.getElementById('toggleJoins').addEventListener('change', (e)=>{ State.diagram.showJoins=e.target.checked; renderDiagram(); });
+document.getElementById('toggleLabels').addEventListener('change', (e)=>{ State.diagram.showLabels=e.target.checked; if(gSel) gSel.selectAll('g.node ~ *'); renderDiagram(); });
+
+document.getElementById('zoomIn').addEventListener('click', ()=>{ if(svgSel && zoomBehavior) svgSel.transition().duration(200).call(zoomBehavior.scaleBy, 1.3); });
+document.getElementById('zoomOut').addEventListener('click', ()=>{ if(svgSel && zoomBehavior) svgSel.transition().duration(200).call(zoomBehavior.scaleBy, 0.75); });
+document.getElementById('zoomReset').addEventListener('click', ()=>{ if(svgSel && zoomBehavior) svgSel.transition().duration(250).call(zoomBehavior.transform, d3.zoomIdentity); });
+
+window.addEventListener('resize', debounce(()=>{ if(State.activeTab==='diagram' && State.model) renderDiagram(); }, 300));
+
+/* ============================================================
+   FILE MANAGER MODAL + UPLOAD WIRING
+============================================================ */
+const fileInput = document.getElementById('fileInput');
+document.getElementById('dropzone').addEventListener('click', ()=>fileInput.click());
+document.getElementById('smallDrop').addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', (e)=>{ handleFiles(e.target.files); fileInput.value=''; });
+
+['dropzone','smallDrop'].forEach(id=>{
+  const el = document.getElementById(id);
+  el.addEventListener('dragover', (e)=>{ e.preventDefault(); el.classList.add('drag'); });
+  el.addEventListener('dragleave', ()=> el.classList.remove('drag'));
+  el.addEventListener('drop', (e)=>{ e.preventDefault(); el.classList.remove('drag'); handleFiles(e.dataTransfer.files); });
+});
+
+document.getElementById('btnSample').addEventListener('click', loadSample);
+
+document.getElementById('btnManageData').addEventListener('click', ()=>{
+  renderFileList();
+  document.getElementById('modalOverlay').classList.add('open');
+});
+document.getElementById('modalClose').addEventListener('click', ()=> document.getElementById('modalOverlay').classList.remove('open'));
+document.getElementById('modalOverlay').addEventListener('click', (e)=>{ if(e.target.id==='modalOverlay') document.getElementById('modalOverlay').classList.remove('open'); });
+
+function renderFileList(){
+  const host = document.getElementById('fileList');
+  if(!State.files.length){ host.innerHTML = `<p style="color:var(--text-faint);font-size:12.5px;margin-top:14px">No workbooks loaded yet.</p>`; return; }
+  host.innerHTML = State.files.map(f=>`
+    <div class="file-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3v5h5"/><path d="M6 3h8l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/></svg>
+      <div>
+        <div class="fname">${esc(f.name)}</div>
+        <div class="fmeta">${(f.lineage||[]).length} lineage rows · ${(f.objects||[]).length} objects · ${(f.relationships||[]).length} joins</div>
+      </div>
+      <button class="rm" data-id="${f.id}" title="Remove">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>`).join('');
+  host.querySelectorAll('.rm').forEach(b=>b.addEventListener('click', ()=>removeFile(b.dataset.id)));
+}
+
+/* ============================================================
+   EXPORT MENU
+============================================================ */
+const exportBtn = document.getElementById('btnExport');
+const exportMenu = document.getElementById('exportMenu');
+exportBtn.addEventListener('click', (e)=>{ e.stopPropagation(); exportMenu.classList.toggle('open'); });
+document.addEventListener('click', ()=> exportMenu.classList.remove('open'));
+
+document.getElementById('expFull').addEventListener('click', ()=>exportExcel(false));
+document.getElementById('expFiltered').addEventListener('click', ()=>exportExcel(true));
+document.getElementById('expPng').addEventListener('click', ()=>exportDiagramImage('png'));
+document.getElementById('expJpg').addEventListener('click', ()=>exportDiagramImage('jpg'));
+
+function exportExcel(filteredOnly){
+  if(!State.model){ toast('Load a workbook first.', true); return; }
+  const m = State.model;
+  const rows = filteredOnly ? getFilteredLineage() : m.lineage;
+
+  const lineageAoa = [['Object','Object Type','Table','Column','Usage','Statement Type','Transformation','Expression','Maps To','Is Lookup Table','Is Temp Table']];
+  rows.forEach(r=> lineageAoa.push([r.sourceObject,r.objectType,r.table,r.column,r.usage,r.statementType,r.transformation,r.expression,r.mapsTo,yn(r.isLookup),yn(r.isTemp)]));
+
+  const relAoa = [['Table A','Column A','Table B','Column B','Source Object']];
+  m.relationships.forEach(r=> relAoa.push([r.tableA,r.columnA,r.tableB,r.columnB,r.sourceObject]));
+
+  const tblAoa = [['Table','Is Lookup Table','Is Temp / Table Var','Distinct Columns Referenced','Times Joined','Used In # Objects','Used In Objects']];
+  Array.from(m.tables.values()).sort((a,b)=>a.name.localeCompare(b.name)).forEach(t=>{
+    tblAoa.push([t.name, yn(t.isLookup), yn(t.isTemp), t.columns.size, t.joins, t.objects.size, Array.from(t.objects).join(', ')]);
+  });
+
+  const objAoa = [['Object Name','Type','Tables Referenced','Lineage Rows']];
+  Array.from(m.objects.values()).sort((a,b)=>a.name.localeCompare(b.name)).forEach(o=>{
+    objAoa.push([o.name, o.type, o.tablesReferenced.join(', '), o.lineageRows || m.lineage.filter(r=>r.sourceObject===o.name).length]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(lineageAoa), 'Column Lineage');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(relAoa), 'Table Relationships');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tblAoa), 'Tables Summary');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(objAoa), 'Objects');
+
+  const stamp = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  XLSX.writeFile(wb, `lineagemap_export_${filteredOnly?'filtered_':''}${stamp}.xlsx`);
+  toast('Excel file exported.');
+}
+
+function exportDiagramImage(format){
+  if(!svgSel || !State.model){ toast('Open the ER diagram tab first.', true); return; }
+  const svgNode = svgSel.node();
+  const bbox = gSel.node().getBBox();
+  const pad = 60;
+  const w = Math.max(400, Math.ceil(bbox.width + pad*2));
+  const h = Math.max(300, Math.ceil(bbox.height + pad*2));
+  const scale = 3;
+
+  const clone = svgNode.cloneNode(true);
+  clone.setAttribute('width', w); clone.setAttribute('height', h);
+  clone.setAttribute('viewBox', `${bbox.x-pad} ${bbox.y-pad} ${w} ${h}`);
+  clone.querySelector('g').removeAttribute('transform');
+  const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  bg.setAttribute('x', bbox.x-pad); bg.setAttribute('y', bbox.y-pad);
+  bg.setAttribute('width', w); bg.setAttribute('height', h);
+  bg.setAttribute('fill', '#0D1219');
+  clone.insertBefore(bg, clone.firstChild);
+
+  const xml = new XMLSerializer().serializeToString(clone);
+  const svgBlob = new Blob([xml], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = ()=>{
+    const canvas = document.createElement('canvas');
+    canvas.width = w*scale; canvas.height = h*scale;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0D1219';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+    const mime = format==='jpg' ? 'image/jpeg' : 'image/png';
+    canvas.toBlob((blob)=>{
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `lineagemap_diagram_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.${format}`;
+      a.click();
+      toast(`Diagram exported as ${format.toUpperCase()} (${canvas.width}×${canvas.height}px).`);
+    }, mime, 0.95);
+  };
+  img.onerror = ()=> toast('Could not render the diagram for export.', true);
+  img.src = url;
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+showEmptyState();
+
+})();
+</script>
+</body>
+</html>
