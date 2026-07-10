@@ -1,0 +1,1879 @@
+/* ---------- Top bar ---------- */
+.topbar{
+  grid-column:1/3;
+  display:flex;align-items:center;gap:14px;
+  padding:0 18px;
+  background:linear-gradient(180deg,#121826,#0f1420);
+  border-bottom:1px solid var(--border);
+  z-index:20;
+}
+.topbar .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;letter-spacing:.2px;}
+.topbar .brand .logo{
+  width:26px;height:26px;border-radius:7px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:800;
+  box-shadow:0 2px 10px rgba(91,157,255,.35);
+}
+.topbar .sub{color:var(--text-2);font-size:12px;font-weight:500;}
+.topbar .spacer{flex:1;}
+.stat-pill{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg-3);border:1px solid var(--border-soft);
+  padding:5px 10px;border-radius:20px;font-size:12px;color:var(--text-1);
+}
+.stat-pill b{color:var(--text-0);font-weight:700;}
+.stat-pill .dot{width:6px;height:6px;border-radius:50%;}
+
+/* ---------- Sidebar ---------- */
+.sidebar{
+  background:var(--bg-1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.sidebar-section{padding:16px 16px 0 16px;}
+.sidebar-title{
+  font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--text-2);
+  text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;justify-content:space-between;
+}
+.sidebar-title .info-icon{
+  width:14px;height:14px;border-radius:50%;border:1px solid var(--text-2);
+  display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-2);cursor:help;
+}
+textarea#sqlInput{
+  width:100%;height:150px;resize:vertical;
+  background:var(--bg-2);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+  color:var(--text-0);font-family:var(--mono);font-size:12px;padding:10px;
+  outline:none;transition:border-color .15s;line-height:1.5;
+}
+textarea#sqlInput:focus{border-color:var(--accent);}
+.dropzone{
+  margin-top:8px;
+  border:1.5px dashed var(--border);
+  border-radius:var(--radius-sm);
+  padding:14px 10px;
+  text-align:center;
+  color:var(--text-2);
+  font-size:12px;
+  cursor:pointer;
+  transition:all .15s;
+}
+.dropzone:hover,.dropzone.drag{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+.btn-row{display:flex;gap:8px;margin-top:10px;}
+.btn{
+  appearance:none;border:1px solid var(--border-soft);
+  background:var(--bg-3);color:var(--text-0);
+  padding:8px 12px;border-radius:var(--radius-sm);
+  font-size:12.5px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .12s;
+  flex:1;
+}
+.btn:hover{background:var(--bg-hover);border-color:#3a4459;}
+.btn:active{transform:translateY(1px);}
+.btn.primary{background:linear-gradient(135deg,var(--accent),#4a7fe0);border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(91,157,255,.28);}
+.btn.primary:hover{filter:brightness(1.08);}
+.btn.ghost{background:transparent;}
+.btn.small{padding:6px 10px;font-size:11.5px;flex:none;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.btn svg{width:14px;height:14px;flex-shrink:0;}
+
+.objects-list{flex:1;overflow-y:auto;padding:6px 10px 16px 10px;margin-top:6px;}
+.object-card{
+  background:var(--bg-2);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+  padding:9px 10px;margin-bottom:7px;cursor:pointer;transition:all .12s;
+}
+.object-card:hover{border-color:var(--accent);}
+.object-card.dim{opacity:.4;}
+.object-card .oname{font-weight:700;font-size:12.5px;color:var(--text-0);word-break:break-all;}
+.object-card .ometa{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;}
+.tag{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:4px;}
+.tag.proc{background:var(--accent-soft);color:var(--accent);}
+.tag.view{background:var(--purple-soft);color:var(--purple);}
+.tag.func{background:var(--cyan-soft);color:var(--cyan);}
+.tag.script{background:var(--bg-3);color:var(--text-2);}
+.empty-hint{color:var(--text-2);font-size:12px;text-align:center;padding:30px 10px;line-height:1.6;}
+
+.sample-link{color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+
+/* ---------- Main ---------- */
+.main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg-0);}
+.tabs{
+  display:flex;align-items:center;gap:4px;
+  padding:10px 18px 0 18px;border-bottom:1px solid var(--border);background:var(--bg-1);
+}
+.tab-btn{
+  background:transparent;border:none;color:var(--text-2);
+  padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .12s;border-radius:6px 6px 0 0;
+}
+.tab-btn:hover{color:var(--text-0);background:var(--bg-2);}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tabs .spacer{flex:1;}
+.panel{flex:1;overflow:hidden;display:none;flex-direction:column;}
+.panel.active{display:flex;}
+
+/* ---------- Table panel ---------- */
+.table-toolbar{
+  display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border-soft);
+  background:var(--bg-1);flex-wrap:wrap;
+}
+.search-box{
+  position:relative;flex:1;min-width:200px;max-width:340px;
+}
+.search-box input{
+  width:100%;background:var(--bg-2);border:1px solid var(--border-soft);border-radius:20px;
+  padding:8px 14px 8px 32px;color:var(--text-0);font-size:12.5px;outline:none;
+}
+.search-box input:focus{border-color:var(--accent);}
+.search-box svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text-2);}
+.filter-select{
+  background:var(--bg-2);border:1px solid var(--border-soft);border-radius:var(--radius-sm);
+  color:var(--text-1);font-size:12px;padding:7px 10px;outline:none;cursor:pointer;
+}
+.filter-select:focus{border-color:var(--accent);}
+.check-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-1);cursor:pointer;user-select:none;}
+.check-toggle input{accent-color:var(--accent);cursor:pointer;}
+.table-toolbar .spacer{flex:1;}
+.count-badge{font-size:11.5px;color:var(--text-2);}
+
+.table-scroll{flex:1;overflow:auto;padding:0 18px 18px 18px;}
+table.lineage-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;margin-top:12px;}
+table.lineage-table thead th{
+  position:sticky;top:0;background:#161b26;color:var(--text-2);
+  text-align:left;padding:10px 12px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;z-index:5;
+}
+table.lineage-table thead th:hover{color:var(--text-0);}
+table.lineage-table thead th .arrow{opacity:.4;margin-left:4px;font-size:10px;}
+table.lineage-table thead th.sorted .arrow{opacity:1;color:var(--accent);}
+table.lineage-table tbody td{padding:9px 12px;border-bottom:1px solid var(--border-soft);color:var(--text-1);vertical-align:top;}
+table.lineage-table tbody tr{transition:background .1s;}
+table.lineage-table tbody tr:hover{background:var(--bg-2);}
+table.lineage-table tbody td.mono{font-family:var(--mono);}
+table.lineage-table tbody td.strong{color:var(--text-0);font-weight:600;}
+.badge{
+  display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;
+  padding:3px 8px;border-radius:5px;white-space:nowrap;
+}
+.badge.b-select{background:var(--accent-soft);color:var(--accent);}
+.badge.b-filter{background:var(--amber-soft);color:var(--amber);}
+.badge.b-join{background:var(--green-soft);color:var(--green);}
+.badge.b-group{background:var(--purple-soft);color:var(--purple);}
+.badge.b-order{background:var(--cyan-soft);color:var(--cyan);}
+.badge.b-having{background:var(--pink-soft);color:var(--pink);}
+.badge.b-target{background:var(--red-soft);color:var(--red);}
+.badge.b-set{background:var(--red-soft);color:var(--red);}
+.badge.b-lookup{background:var(--amber-soft);color:var(--amber);}
+.badge.b-direct{background:var(--bg-3);color:var(--text-2);}
+.lookup-star{color:var(--amber);margin-left:4px;}
+.expr-code{
+  font-family:var(--mono);font-size:11px;background:var(--bg-2);border:1px solid var(--border-soft);
+  padding:2px 6px;border-radius:4px;color:var(--text-1);display:inline-block;max-width:280px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;
+}
+tr.grp-row td{background:#141a26;font-weight:700;color:var(--text-0);font-size:11.5px;padding:8px 12px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);}
+tr.grp-row td span.cnt{color:var(--text-2);font-weight:500;text-transform:none;margin-left:8px;}
+
+/* ---------- ER diagram panel ---------- */
+.er-toolbar{
+  display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border-soft);
+  background:var(--bg-1);
+}
+.er-toolbar .zoom-group{display:flex;align-items:center;gap:4px;background:var(--bg-2);border:1px solid var(--border-soft);border-radius:8px;padding:3px;}
+.icon-btn{
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;
+  background:transparent;border:none;color:var(--text-1);cursor:pointer;
+}
+.icon-btn:hover{background:var(--bg-hover);color:var(--text-0);}
+.icon-btn svg{width:15px;height:15px;}
+.zoom-pct{font-size:11.5px;color:var(--text-2);min-width:38px;text-align:center;}
+.er-canvas-wrap{flex:1;position:relative;overflow:hidden;background:
+  radial-gradient(circle at 1px 1px, #1b2230 1.4px, transparent 0) 0 0/22px 22px, var(--bg-0);}
+.er-legend{
+  position:absolute;bottom:14px;left:14px;background:rgba(17,21,29,.9);backdrop-filter:blur(6px);
+  border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:11px;color:var(--text-1);
+  display:flex;flex-direction:column;gap:5px;z-index:15;
+}
+.er-legend .lg-item{display:flex;align-items:center;gap:7px;}
+.er-legend .swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.er-hint{position:absolute;top:14px;right:14px;font-size:11px;color:var(--text-2);background:rgba(17,21,29,.85);padding:7px 11px;border-radius:8px;border:1px solid var(--border);z-index:15;}
+
+/* ---------- Summary panel ---------- */
+.summary-scroll{flex:1;overflow:auto;padding:20px;}
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:22px;}
+.metric-card{
+  background:var(--bg-1);border:1px solid var(--border-soft);border-radius:var(--radius);padding:16px 18px;
+}
+.metric-card .mval{font-size:26px;font-weight:800;color:var(--text-0);}
+.metric-card .mlabel{font-size:11.5px;color:var(--text-2);margin-top:4px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+.summary-section{margin-bottom:24px;}
+.summary-section h3{font-size:13px;color:var(--text-0);margin:0 0 10px 0;font-weight:700;}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{
+  background:var(--bg-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 12px;font-size:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.chip b{color:var(--text-0);}
+.chip .n{background:var(--bg-3);color:var(--text-1);padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:700;}
+
+/* misc */
+.hidden{display:none !important;}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);
+  background:#1c2434;border:1px solid var(--border);color:var(--text-0);padding:11px 18px;border-radius:9px;
+  font-size:12.5px;box-shadow:var(--shadow);z-index:200;opacity:0;pointer-events:none;transition:all .25s;
+  display:flex;align-items:center;gap:8px;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast .dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+.toast.err .dot{background:var(--red);}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><div class="logo">SQ</div>SQL Lineage Explorer <span class="sub">&nbsp;— column usage &amp; ER mapping</span></div>
+    <div class="spacer"></div>
+    <div class="stat-pill" id="pillObjects"><span class="dot" style="background:var(--accent)"></span><b id="statObjects">0</b>&nbsp;objects</div>
+    <div class="stat-pill" id="pillTables"><span class="dot" style="background:var(--green)"></span><b id="statTables">0</b>&nbsp;tables</div>
+    <div class="stat-pill" id="pillCols"><span class="dot" style="background:var(--purple)"></span><b id="statCols">0</b>&nbsp;columns</div>
+    <div class="stat-pill" id="pillRels"><span class="dot" style="background:var(--cyan)"></span><b id="statRels">0</b>&nbsp;relations</div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Paste SQL <span class="info-icon" title="Paste one or more CREATE PROCEDURE / CREATE VIEW / CREATE FUNCTION statements. Multiple objects in one paste are auto-detected.">i</span></div>
+      <textarea id="sqlInput" placeholder="Paste one or more CREATE PROCEDURE / CREATE VIEW statements here...&#10;&#10;Or try the sample: click 'Load sample' below."></textarea>
+      <div class="dropzone" id="dropzone">
+        <div>Drop .sql files here, or <span class="sample-link" id="browseLink">browse</span></div>
+      </div>
+      <input type="file" id="fileInput" accept=".sql,.txt" multiple class="hidden">
+      <div class="btn-row">
+        <button class="btn primary" id="parseBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          Analyze SQL
+        </button>
+        <button class="btn ghost small" id="sampleBtn">Load sample</button>
+        <button class="btn ghost small" id="clearBtn">Clear</button>
+      </div>
+    </div>
+    <div class="sidebar-section" style="margin-top:14px;flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div class="sidebar-title">Parsed Objects <span id="objCount" style="color:var(--text-2);font-weight:600;"></span></div>
+    </div>
+    <div class="objects-list" id="objectsList">
+      <div class="empty-hint">No objects parsed yet.<br>Paste SQL or drop files, then click <b>Analyze SQL</b>.</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tableTab">Column Usage Table</button>
+      <button class="tab-btn" data-tab="erTab">ER Diagram</button>
+      <button class="tab-btn" data-tab="summaryTab">Summary</button>
+      <div class="spacer"></div>
+      <button class="btn small" id="exportExcelBtn" style="margin-bottom:8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Export Excel
+      </button>
+      <button class="btn small" id="exportImgBtn" style="margin-bottom:8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+        Export Diagram
+      </button>
+    </div>
+
+    <!-- TABLE PANEL -->
+    <div class="panel active" id="tableTab">
+      <div class="table-toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="searchInput" placeholder="Search table, column, expression...">
+        </div>
+        <select class="filter-select" id="filterTable"><option value="">All tables</option></select>
+        <select class="filter-select" id="filterUsage"><option value="">All usage types</option></select>
+        <select class="filter-select" id="filterTransform"><option value="">All transformations</option></select>
+        <select class="filter-select" id="filterObject"><option value="">All objects</option></select>
+        <label class="check-toggle"><input type="checkbox" id="filterLookupOnly"> Lookup tables only</label>
+        <label class="check-toggle"><input type="checkbox" id="groupByTable" checked> Group by table</label>
+        <div class="spacer"></div>
+        <span class="count-badge" id="rowCount">0 rows</span>
+      </div>
+      <div class="table-scroll">
+        <table class="lineage-table" id="lineageTable">
+          <thead>
+            <tr>
+              <th data-key="table">Table <span class="arrow">↕</span></th>
+              <th data-key="column">Column <span class="arrow">↕</span></th>
+              <th data-key="usage">Usage <span class="arrow">↕</span></th>
+              <th data-key="transformation">Transformation <span class="arrow">↕</span></th>
+              <th data-key="expression">Expression</th>
+              <th data-key="mapsTo">Maps To</th>
+              <th data-key="objectName">Source Object <span class="arrow">↕</span></th>
+              <th data-key="statementType">Stmt</th>
+              <th data-key="lookup">Lookup?</th>
+            </tr>
+          </thead>
+          <tbody id="lineageBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ER PANEL -->
+    <div class="panel" id="erTab">
+      <div class="er-toolbar">
+        <div class="zoom-group">
+          <button class="icon-btn" id="zoomOut" title="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M8 11h6"/></svg></button>
+          <span class="zoom-pct" id="zoomPct">100%</span>
+          <button class="icon-btn" id="zoomIn" title="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3M11 8v6M8 11h6"/></svg></button>
+        </div>
+        <button class="btn small ghost" id="resetLayoutBtn">Reset layout</button>
+        <button class="btn small ghost" id="fitViewBtn">Fit to screen</button>
+        <label class="check-toggle"><input type="checkbox" id="erLookupToggle" checked> Show lookup tables</label>
+        <div class="spacer"></div>
+        <span class="count-badge" id="erCount"></span>
+      </div>
+      <div class="er-canvas-wrap" id="erCanvasWrap">
+        <div class="er-hint">Scroll to zoom · drag background to pan · drag a table to reposition</div>
+        <div class="er-legend">
+          <div class="lg-item"><span class="swatch" style="background:var(--accent)"></span>Core table</div>
+          <div class="lg-item"><span class="swatch" style="background:var(--amber)"></span>Lookup / reference table</div>
+          <div class="lg-item"><span class="swatch" style="background:var(--red)"></span>Write target table</div>
+          <div class="lg-item"><span class="swatch" style="background:var(--text-2)"></span>Join / relationship</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUMMARY PANEL -->
+    <div class="panel" id="summaryTab">
+      <div class="summary-scroll" id="summaryScroll"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<script>
+
+
+/* ===== parser.js ===== */
+/* ============================================================
+   SQL Lineage Parser
+   Heuristic, regex/tokenizer based parser for T-SQL flavored
+   CREATE PROCEDURE / CREATE VIEW / CREATE FUNCTION bodies.
+   Not a full ANSI SQL parser — designed to recognize common,
+   real-world patterns (FROM/JOIN, INSERT..SELECT, UPDATE..SET,
+   MERGE, CASE/CAST/aggregate/date/string functions) and surface
+   column-level usage + transformation + lineage information.
+   ============================================================ */
+
+const SQL_KEYWORDS = new Set([
+  'select','from','where','join','inner','left','right','full','outer','cross','apply',
+  'on','and','or','not','group','by','order','having','union','all','distinct','top',
+  'insert','into','values','update','set','delete','merge','using','when','matched',
+  'then','else','end','case','as','with','declare','exec','execute','return','returns',
+  'begin','commit','rollback','transaction','table','view','procedure','proc','function',
+  'create','alter','drop','if','while','print','go','null','is','in','between','like',
+  'over','partition','asc','desc','cast','convert','isnull','coalesce','nullif','try_cast',
+  'try_convert','output','deleted','inserted','for','xml','path','json','cte','offset',
+  'fetch','next','rows','only','of','check','constraint','primary','key','foreign',
+  'references','default','identity','nocount','readonly'
+]);
+
+const AGG_FUNCS = new Set(['sum','count','count_big','avg','min','max','string_agg','var','varp','stdev','stdevp','grouping']);
+const CAST_FUNCS = new Set(['cast','convert','try_cast','try_convert','parse','try_parse']);
+const NULL_FUNCS = new Set(['isnull','coalesce','nullif']);
+const STRING_FUNCS = new Set(['substring','left','right','ltrim','rtrim','trim','upper','lower','replace','concat','concat_ws',
+  'patindex','charindex','stuff','format','reverse','space','replicate','len','datalength','str','quotename']);
+const DATE_FUNCS = new Set(['dateadd','datediff','datediff_big','datepart','datename','getdate','getutcdate','sysdatetime',
+  'eomonth','year','month','day','todatetimeoffset','switchoffset','datefromparts','datetimefromparts']);
+const WINDOW_FUNCS = new Set(['row_number','rank','dense_rank','ntile','lag','lead','first_value','last_value']);
+const MATH_FUNCS = new Set(['round','abs','ceiling','floor','power','sqrt','square','exp','log','log10','sign']);
+
+const LOOKUP_NAME_RE = /(lookup|_ref$|^ref_|reftable|_type$|_types$|_status$|_statuses$|_code$|_codes$|master|_dim$|^dim_|_category$|_categories$|_lu$)/i;
+
+function stripSqlComments(sql) {
+  let s = sql.replace(/\/\*[\s\S]*?\*\//g, m => ' '.repeat(0));
+  // remove block comments entirely (safe - not preserving offsets since we don't need them)
+  s = sql.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  s = s.replace(/--[^\r\n]*/g, ' ');
+  return s;
+}
+
+function cleanIdent(id) {
+  if (!id) return id;
+  return id.replace(/[\[\]"`]/g, '').trim();
+}
+
+function lastPart(qualifiedName) {
+  const parts = qualifiedName.split('.').map(cleanIdent).filter(Boolean);
+  return parts[parts.length - 1];
+}
+
+/* Split a comma-separated list at top-level (ignoring commas nested inside parentheses) */
+function splitTopLevel(text, sep = ',') {
+  const parts = [];
+  let depth = 0, current = '', inStr = false, strCh = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      current += ch;
+      if (ch === strCh) inStr = false;
+      continue;
+    }
+    if (ch === "'" || ch === '"') { inStr = true; strCh = ch; current += ch; continue; }
+    if (ch === '(') { depth++; current += ch; continue; }
+    if (ch === ')') { depth--; current += ch; continue; }
+    if (ch === sep && depth === 0) { parts.push(current); current = ''; continue; }
+    current += ch;
+  }
+  if (current.trim().length) parts.push(current);
+  return parts.map(p => p.trim()).filter(Boolean);
+}
+
+/* Find matching top-level function call names used within an expression string */
+function detectFunctions(expr) {
+  const found = new Set();
+  const re = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/g;
+  let m;
+  while ((m = re.exec(expr)) !== null) {
+    found.add(m[1].toLowerCase());
+  }
+  return found;
+}
+
+function hasCaseExpression(expr) {
+  return /\bcase\b[\s\S]*?\bwhen\b/i.test(expr);
+}
+
+function hasArithmetic(expr) {
+  // top-level (outside function parens/strings) arithmetic operator between two operands
+  let depth = 0, inStr = false, strCh = '';
+  for (let i = 0; i < expr.length; i++) {
+    const ch = expr[i];
+    if (inStr) { if (ch === strCh) inStr = false; continue; }
+    if (ch === "'" || ch === '"') { inStr = true; strCh = ch; continue; }
+    if (ch === '(') { depth++; continue; }
+    if (ch === ')') { depth--; continue; }
+    if (depth === 0 && '+-*/%'.includes(ch)) {
+      // avoid matching unary minus / leading sign or part of -- (already stripped) or numeric exponent edge cases
+      const prev = expr[i - 1];
+      const next = expr[i + 1];
+      if (prev && /[\w\)\]]/.test(prev) && next && /[\s\w\(]/.test(next)) return true;
+    }
+  }
+  return false;
+}
+
+/* Classify a source expression into a transformation category, given the raw expression text */
+function classifyTransformation(expr) {
+  const funcs = detectFunctions(expr);
+  const has = set => [...funcs].some(f => set.has(f));
+  if (hasCaseExpression(expr)) return 'Conditional Logic (CASE)';
+  if (has(WINDOW_FUNCS)) return 'Window Function';
+  if (has(AGG_FUNCS)) return 'Aggregation';
+  if (has(CAST_FUNCS)) return 'Type Conversion';
+  if (has(NULL_FUNCS)) return 'Null Handling';
+  if (has(DATE_FUNCS)) return 'Date/Time Transformation';
+  if (has(STRING_FUNCS)) return 'String Manipulation';
+  if (has(MATH_FUNCS)) return 'Mathematical Function';
+  if (hasArithmetic(expr)) return 'Calculation (Arithmetic)';
+  if (/^\s*'[^']*'\s*$/.test(expr) || /^\s*\d+(\.\d+)?\s*$/.test(expr) || /^\s*null\s*$/i.test(expr)) return 'Literal / Constant';
+  if (funcs.size > 0) return 'Function Call';
+  return 'Direct Mapping';
+}
+
+/* Extract alias.column and bare column references from an expression */
+function extractColumnRefs(expr) {
+  const refs = [];
+  const re = /\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\.\s*([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
+  let m;
+  while ((m = re.exec(expr)) !== null) {
+    const a = m[1].toLowerCase();
+    if (SQL_KEYWORDS.has(a)) continue;
+    refs.push({ alias: m[1], column: m[2] });
+  }
+  if (refs.length === 0) {
+    // bare column names (no alias) - collect identifiers not inside function-call position and not keywords
+    const re2 = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*\()/g;
+    let m2;
+    while ((m2 = re2.exec(expr)) !== null) {
+      const w = m2[1].toLowerCase();
+      if (SQL_KEYWORDS.has(w)) continue;
+      if (/^\d/.test(w)) continue;
+      refs.push({ alias: null, column: m2[1] });
+    }
+  }
+  return refs;
+}
+
+class LineageEntry {
+  constructor(fields) {
+    Object.assign(this, {
+      objectName: '', objectType: '', statementType: '',
+      table: '', alias: '', column: '', usage: '', transformation: 'Direct Mapping',
+      expression: '', mapsTo: '', isLookup: false, isTemp: false
+    }, fields);
+  }
+}
+
+class SqlObject {
+  constructor(name, type, body, source) {
+    this.name = name;
+    this.type = type; // PROCEDURE | VIEW | FUNCTION | SCRIPT
+    this.body = body;
+    this.source = source;
+    this.aliasMap = new Map(); // alias(lower) -> tableName
+    this.tables = new Set();   // resolved table names referenced
+  }
+}
+
+class SqlLineageParser {
+  constructor() {
+    this.objects = [];
+    this.entries = [];
+    this.relationships = []; // {tableA,colA,tableB,colB,objectName}
+    this.tableMeta = new Map(); // tableName -> {isLookup, isTemp, objects:Set, columns:Set}
+  }
+
+  reset() {
+    this.objects = [];
+    this.entries = [];
+    this.relationships = [];
+    this.tableMeta = new Map();
+  }
+
+  getOrCreateTableMeta(tableName) {
+    const key = tableName;
+    if (!this.tableMeta.has(key)) {
+      const isTemp = /^#/.test(tableName) || /^@/.test(tableName);
+      this.tableMeta.set(key, {
+        name: tableName,
+        isLookup: LOOKUP_NAME_RE.test(tableName),
+        isTemp,
+        objects: new Set(),
+        columns: new Set(),
+        selectPullCount: 0,
+        joinCount: 0
+      });
+    }
+    return this.tableMeta.get(key);
+  }
+
+  addSourceText(sqlText, sourceFileName) {
+    const cleaned = stripSqlComments(sqlText);
+    const found = this.splitObjects(cleaned, sourceFileName);
+    found.forEach(o => {
+      this.objects.push(o);
+      this.parseObject(o);
+    });
+    return found.length;
+  }
+
+  splitObjects(sql, sourceFileName) {
+    const regex = /CREATE\s+(OR\s+ALTER\s+)?(PROCEDURE|PROC|VIEW|FUNCTION)\s+([\[\]\w\.]+)/gi;
+    const matches = [...sql.matchAll(regex)];
+    if (matches.length === 0) {
+      if (!sql.trim()) return [];
+      return [new SqlObject(sourceFileName || 'Untitled Script', 'SCRIPT', sql, sourceFileName)];
+    }
+    const chunks = [];
+    for (let i = 0; i < matches.length; i++) {
+      const start = matches[i].index;
+      const end = i + 1 < matches.length ? matches[i + 1].index : sql.length;
+      const typeRaw = matches[i][2].toUpperCase();
+      const type = typeRaw === 'PROC' ? 'PROCEDURE' : typeRaw;
+      const name = cleanIdent(matches[i][3]);
+      chunks.push(new SqlObject(name, type, sql.substring(start, end), sourceFileName));
+    }
+    return chunks;
+  }
+
+  /* -------- table & alias discovery -------- */
+  discoverTables(obj) {
+    const body = obj.body;
+    const re = /\b(FROM|JOIN|UPDATE|INTO|MERGE)\s+(#{0,2}@?\[?[\w]+\]?(?:\s*\.\s*\[?[\w]+\]?){0,2})(\s+(?:AS\s+)?(?!ON\b|WHERE\b|INNER\b|LEFT\b|RIGHT\b|FULL\b|OUTER\b|CROSS\b|JOIN\b|GROUP\b|ORDER\b|SET\b|WITH\b|VALUES\b|HAVING\b|UNION\b)\[?[a-zA-Z_][\w]*\]?)?/gi;
+    const rawMatches = [];
+    let m;
+    while ((m = re.exec(body)) !== null) {
+      const clause = m[1].toUpperCase();
+      const rawTable = cleanIdent(m[2]).replace(/\s+/g, '');
+      let alias = m[3] ? cleanIdent(m[3].trim()) : null;
+      if (alias && SQL_KEYWORDS.has(alias.toLowerCase())) alias = null;
+      rawMatches.push({ clause, rawTable, alias });
+    }
+
+    rawMatches.forEach(({ clause, rawTable, alias }) => {
+      if (clause === 'UPDATE') return;
+      obj.tables.add(rawTable);
+      if (alias) obj.aliasMap.set(alias.toLowerCase(), rawTable);
+      obj.aliasMap.set(rawTable.toLowerCase(), rawTable);
+      obj.aliasMap.set(lastPart(rawTable).toLowerCase(), rawTable);
+      const meta = this.getOrCreateTableMeta(rawTable);
+      meta.objects.add(obj.name);
+      if (clause === 'JOIN') meta.joinCount++;
+    });
+
+    rawMatches.forEach(({ clause, rawTable }) => {
+      if (clause !== 'UPDATE') return;
+      const key = rawTable.toLowerCase();
+      const resolved = obj.aliasMap.get(key);
+      const isAliasForAnother = resolved && resolved.toLowerCase() !== key;
+      if (isAliasForAnother) return;
+      obj.tables.add(rawTable);
+      obj.aliasMap.set(rawTable.toLowerCase(), rawTable);
+      obj.aliasMap.set(lastPart(rawTable).toLowerCase(), rawTable);
+      const meta = this.getOrCreateTableMeta(rawTable);
+      meta.objects.add(obj.name);
+    });
+  }
+
+  resolveAlias(obj, aliasOrTable) {
+    if (!aliasOrTable) return null;
+    const key = aliasOrTable.toLowerCase();
+    if (obj.aliasMap.has(key)) return obj.aliasMap.get(key);
+    // single-table scope fallback
+    if (obj.tables.size === 1) return [...obj.tables][0];
+    return null;
+  }
+
+  /* -------- JOIN ON relationship extraction -------- */
+  discoverJoinConditions(obj) {
+    const body = obj.body;
+    const re = /\bJOIN\b[\s\S]*?\bON\b\s+([\s\S]*?)(?=\bINNER\s+JOIN\b|\bLEFT\s+(?:OUTER\s+)?JOIN\b|\bRIGHT\s+(?:OUTER\s+)?JOIN\b|\bFULL\s+(?:OUTER\s+)?JOIN\b|\bCROSS\s+JOIN\b|\bJOIN\b|\bWHERE\b|\bGROUP\s+BY\b|\bORDER\s+BY\b|\bHAVING\b|;|$)/gi;
+    let m;
+    while ((m = re.exec(body)) !== null) {
+      const condText = m[1];
+      const pairRe = /([a-zA-Z_][\w]*)\s*\.\s*([a-zA-Z_][\w]*)\s*=\s*([a-zA-Z_][\w]*)\s*\.\s*([a-zA-Z_][\w]*)/g;
+      let pm;
+      while ((pm = pairRe.exec(condText)) !== null) {
+        const tA = this.resolveAlias(obj, pm[1]) || pm[1];
+        const tB = this.resolveAlias(obj, pm[3]) || pm[3];
+        if (!tA || !tB || tA === tB) continue;
+        this.relationships.push({ tableA: tA, colA: pm[2], tableB: tB, colB: pm[4], objectName: obj.name });
+        this.recordUsage(obj, tA, pm[2], 'Join Key', `${pm[1]}.${pm[2]} = ${pm[3]}.${pm[4]}`, 'Join Predicate');
+        this.recordUsage(obj, tB, pm[4], 'Join Key', `${pm[1]}.${pm[2]} = ${pm[3]}.${pm[4]}`, 'Join Predicate');
+      }
+    }
+  }
+
+  /* -------- WHERE / GROUP BY / ORDER BY / HAVING usage extraction -------- */
+  discoverClauseUsage(obj) {
+    const body = obj.body;
+    this.scanClause(obj, body, /\bWHERE\b\s+([\s\S]*?)(?=\bGROUP\s+BY\b|\bORDER\s+BY\b|\bHAVING\b|;|$)/gi, 'Filter (WHERE)');
+    this.scanClause(obj, body, /\bGROUP\s+BY\b\s+([\s\S]*?)(?=\bORDER\s+BY\b|\bHAVING\b|;|$)/gi, 'Group By');
+    this.scanClause(obj, body, /\bHAVING\b\s+([\s\S]*?)(?=\bORDER\s+BY\b|;|$)/gi, 'Having');
+    this.scanClause(obj, body, /\bORDER\s+BY\b\s+([\s\S]*?)(?=;|$)/gi, 'Order By');
+  }
+
+  scanClause(obj, body, regex, usageLabel) {
+    let m;
+    while ((m = regex.exec(body)) !== null) {
+      const items = usageLabel === 'Group By' || usageLabel === 'Order By' ? splitTopLevel(m[1]) : [m[1]];
+      items.forEach(item => {
+        const refs = extractColumnRefs(item);
+        refs.forEach(r => {
+          const table = this.resolveAlias(obj, r.alias) || (obj.tables.size === 1 ? [...obj.tables][0] : null);
+          if (!table) return;
+          this.recordUsage(obj, table, r.column, usageLabel, item.trim().slice(0, 160), 'Direct Mapping');
+        });
+      });
+    }
+  }
+
+  /* -------- SELECT list extraction (output columns + transformations) -------- */
+  discoverSelectLists(obj) {
+    const body = obj.body;
+    const re = /\bSELECT\b\s+(?:(?:TOP\s*\(?\s*\d+\s*\)?\s*)?(?:DISTINCT\s+)?)([\s\S]*?)\bFROM\b/gi;
+    let m;
+    while ((m = re.exec(body)) !== null) {
+      const listText = m[1];
+      if (/^\s*@/.test(listText.trim())) continue; // SELECT @var = ... assignment style, skip here
+      const items = splitTopLevel(listText);
+      items.forEach(item => this.processSelectItem(obj, item));
+    }
+  }
+
+  processSelectItem(obj, item) {
+    item = item.trim();
+    if (!item || item === '*') return;
+    // pattern: expr AS alias  |  expr alias  |  alias = expr (T-SQL assignment style)  |  expr
+    let outputAlias = null, expr = item;
+    let mm = item.match(/^([a-zA-Z_][\w]*)\s*=\s*([\s\S]+)$/);
+    if (mm && !/^(select|case)$/i.test(mm[1])) {
+      outputAlias = cleanIdent(mm[1]);
+      expr = mm[2];
+    } else {
+      mm = item.match(/^([\s\S]+?)\s+AS\s+\[?([a-zA-Z_][\w]*)\]?\s*$/i);
+      if (mm) { expr = mm[1]; outputAlias = cleanIdent(mm[2]); }
+      else {
+        mm = item.match(/^([\s\S]+?)\s+\[?([a-zA-Z_][\w]*)\]?\s*$/);
+        if (mm && /[\)\.\s]/.test(mm[1]) && !SQL_KEYWORDS.has(mm[2].toLowerCase())) {
+          // heuristic: only treat trailing bare word as alias if expr contains an operator/function/dot already
+          if (/[\+\-\*\/\(]|CASE/i.test(mm[1]) || mm[1].includes('.')) { expr = mm[1]; outputAlias = cleanIdent(mm[2]); }
+        }
+      }
+    }
+    expr = expr.trim().replace(/\*\/\s*$/, '').trim();
+    if (!expr) return;
+    const transformation = classifyTransformation(expr);
+    const refs = extractColumnRefs(expr);
+    if (refs.length === 0) {
+      // literal or unresolvable expression - still record against a pseudo "(expression)" bucket only if it's a real computed literal
+      return;
+    }
+    refs.forEach(r => {
+      const table = this.resolveAlias(obj, r.alias) || (obj.tables.size === 1 ? [...obj.tables][0] : null);
+      if (!table) return;
+      const meta = this.getOrCreateTableMeta(table);
+      meta.selectPullCount++;
+      this.recordUsage(obj, table, r.column, 'Output (SELECT)', expr.slice(0, 160), transformation, outputAlias);
+    });
+  }
+
+  /* -------- INSERT ... (cols) SELECT ... : column-level target mapping -------- */
+  discoverInsertSelect(obj) {
+    const body = obj.body;
+    const re = /\bINSERT\s+(?:INTO\s+)?(#{0,2}@?\[?[\w]+\]?(?:\s*\.\s*\[?[\w]+\]?){0,2})\s*\(([^)]*)\)\s*(?:OUTPUT[\s\S]*?)?\bSELECT\b\s+(?:(?:TOP\s*\(?\s*\d+\s*\)?\s*)?(?:DISTINCT\s+)?)([\s\S]*?)\bFROM\b/gi;
+    let m;
+    while ((m = re.exec(body)) !== null) {
+      const targetTable = cleanIdent(m[1]).replace(/\s+/g, '');
+      const targetCols = splitTopLevel(m[2]).map(cleanIdent);
+      const sourceItems = splitTopLevel(m[3]);
+      const tMeta = this.getOrCreateTableMeta(targetTable);
+      tMeta.objects.add(obj.name);
+      targetCols.forEach((tCol, idx) => {
+        tMeta.columns.add(tCol);
+        const srcItem = sourceItems[idx];
+        if (!srcItem) return;
+        const transformation = classifyTransformation(srcItem);
+        const refs = extractColumnRefs(srcItem);
+        const mapsTo = `${targetTable}.${tCol}`;
+        if (refs.length === 0) {
+          this.entries.push(new LineageEntry({
+            objectName: obj.name, objectType: obj.type, statementType: 'INSERT',
+            table: targetTable, alias: '', column: tCol, usage: 'Target Column (INSERT)',
+            transformation, expression: srcItem.slice(0, 160), mapsTo: '', isLookup: tMeta.isLookup, isTemp: tMeta.isTemp
+          }));
+          return;
+        }
+        refs.forEach(r => {
+          const srcTable = this.resolveAlias(obj, r.alias) || (obj.tables.size === 1 ? [...obj.tables][0] : null);
+          if (!srcTable) return;
+          this.recordUsage(obj, srcTable, r.column, 'Source for INSERT', srcItem.slice(0, 160), transformation, null, mapsTo, 'INSERT');
+        });
+        // also record the target column itself
+        this.entries.push(new LineageEntry({
+          objectName: obj.name, objectType: obj.type, statementType: 'INSERT',
+          table: targetTable, alias: '', column: tCol, usage: 'Target Column (INSERT)',
+          transformation, expression: srcItem.slice(0, 160), mapsTo: '', isLookup: tMeta.isLookup, isTemp: tMeta.isTemp
+        }));
+      });
+    }
+  }
+
+  /* -------- UPDATE ... SET col = expr -------- */
+  discoverUpdateSet(obj) {
+    const body = obj.body;
+    const re = /\bUPDATE\s+(#{0,2}@?\[?[\w]+\]?(?:\s*\.\s*\[?[\w]+\]?){0,2})\s*(?:\[?[a-zA-Z_][\w]*\]?)?\s*\bSET\b\s+([\s\S]*?)(?=\bWHERE\b|\bFROM\b|;|$)/gi;
+    let m;
+    while ((m = re.exec(body)) !== null) {
+      const targetTable = this.resolveAlias(obj, cleanIdent(m[1])) || cleanIdent(m[1]).replace(/\s+/g, '');
+      const assignments = splitTopLevel(m[2]);
+      const tMeta = this.getOrCreateTableMeta(targetTable);
+      tMeta.objects.add(obj.name);
+      assignments.forEach(a => {
+        const am = a.match(/^\[?([a-zA-Z_][\w]*)\]?\s*=\s*([\s\S]+)$/);
+        if (!am) return;
+        const tCol = am[1];
+        tMeta.columns.add(tCol);
+        const srcExpr = am[2].trim();
+        const transformation = classifyTransformation(srcExpr);
+        this.entries.push(new LineageEntry({
+          objectName: obj.name, objectType: obj.type, statementType: 'UPDATE',
+          table: targetTable, alias: '', column: tCol, usage: 'Set Assignment (UPDATE)',
+          transformation, expression: srcExpr.slice(0, 160), mapsTo: '', isLookup: tMeta.isLookup, isTemp: tMeta.isTemp
+        }));
+        const refs = extractColumnRefs(srcExpr);
+        refs.forEach(r => {
+          const srcTable = this.resolveAlias(obj, r.alias);
+          if (!srcTable || srcTable === targetTable) return;
+          this.recordUsage(obj, srcTable, r.column, 'Source for UPDATE', srcExpr.slice(0, 160), transformation, null, `${targetTable}.${tCol}`, 'UPDATE');
+        });
+      });
+    }
+  }
+
+  recordUsage(obj, table, column, usage, expression, transformation, outputAlias, mapsTo, statementType) {
+    if (!table || !column) return;
+    if (SQL_KEYWORDS.has(column.toLowerCase())) return;
+    const meta = this.getOrCreateTableMeta(table);
+    meta.objects.add(obj.name);
+    meta.columns.add(column);
+    this.entries.push(new LineageEntry({
+      objectName: obj.name, objectType: obj.type, statementType: statementType || this.guessStatementType(obj),
+      table, alias: '', column, usage,
+      transformation: transformation || 'Direct Mapping',
+      expression: expression || '', mapsTo: mapsTo || (outputAlias ? `(as) ${outputAlias}` : ''),
+      isLookup: meta.isLookup, isTemp: meta.isTemp
+    }));
+  }
+
+  guessStatementType(obj) {
+    if (/\bMERGE\b/i.test(obj.body)) return 'MERGE';
+    if (/\bINSERT\b/i.test(obj.body) && /\bSELECT\b/i.test(obj.body)) return 'INSERT/SELECT';
+    if (/\bUPDATE\b/i.test(obj.body)) return 'UPDATE';
+    if (obj.type === 'VIEW') return 'VIEW';
+    return 'SELECT';
+  }
+
+  parseObject(obj) {
+    this.discoverTables(obj);
+    this.discoverJoinConditions(obj);
+    this.discoverClauseUsage(obj);
+    this.discoverSelectLists(obj);
+    this.discoverInsertSelect(obj);
+    this.discoverUpdateSet(obj);
+    // refine lookup detection: table joined but very few distinct columns pulled relative to join count
+    obj.tables.forEach(t => {
+      const meta = this.getOrCreateTableMeta(t);
+      if (!meta.isLookup && meta.joinCount > 0 && meta.columns.size > 0 && meta.columns.size <= 2 && meta.selectPullCount <= 3) {
+        meta.isLookup = true;
+      }
+    });
+  }
+
+  /* -------- aggregated views for UI -------- */
+  getTableList() {
+    return [...this.tableMeta.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  getUniqueValues(field) {
+    const s = new Set();
+    this.entries.forEach(e => { if (e[field]) s.add(e[field]); });
+    return [...s].sort();
+  }
+}
+
+
+
+
+/* ===== sample.js ===== */
+const SAMPLE_SQL = `-- =========================================================
+-- Sample script: demonstrates procedures + views the tool
+-- can analyze. Click "Analyze SQL" after loading this.
+-- =========================================================
+
+CREATE OR ALTER PROCEDURE dbo.usp_LoadCustomerOrderSummary
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO dbo.CustomerOrderSummary
+        (CustomerId, CustomerName, OrderCount, TotalRevenue, StatusDesc, RegionName, LoadDate)
+    SELECT
+        c.CustomerId,
+        UPPER(c.FirstName + ' ' + c.LastName)              AS CustomerName,
+        COUNT(o.OrderId)                                    AS OrderCount,
+        SUM(o.LineTotal * o.Quantity)                       AS TotalRevenue,
+        CASE WHEN s.StatusCode = 'A' THEN 'Active'
+             WHEN s.StatusCode = 'P' THEN 'Pending'
+             ELSE 'Inactive' END                            AS StatusDesc,
+        r.RegionName,
+        GETDATE()                                           AS LoadDate
+    FROM dbo.Customer c
+    INNER JOIN dbo.SalesOrder o        ON o.CustomerId = c.CustomerId
+    LEFT JOIN dbo.CustomerStatusLookup s ON s.StatusId = c.StatusId
+    LEFT JOIN dbo.Region r              ON r.RegionId = c.RegionId
+    WHERE o.OrderDate >= DATEADD(YEAR, -1, GETDATE())
+      AND c.IsDeleted = 0
+    GROUP BY c.CustomerId, c.FirstName, c.LastName, s.StatusCode, r.RegionName
+    ORDER BY TotalRevenue DESC;
+
+    UPDATE dbo.Customer
+    SET LastSummaryRun = GETDATE(),
+        RiskScore = CAST(ISNULL(RiskScore, 0) + 1 AS INT),
+        LifetimeValueBand = CASE WHEN RiskScore > 80 THEN 'High' ELSE 'Standard' END
+    WHERE IsDeleted = 0;
+
+END
+GO
+
+CREATE OR ALTER PROCEDURE dbo.usp_ReconcileInventoryLevels
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE inv
+    SET inv.QtyOnHand = inv.QtyOnHand - x.ShippedQty,
+        inv.LastMovementDate = GETDATE()
+    FROM dbo.InventoryLevel inv
+    INNER JOIN dbo.ShipmentLine x ON x.SkuId = inv.SkuId AND x.WarehouseId = inv.WarehouseId
+    WHERE x.ShipmentDate = CAST(GETDATE() AS DATE);
+
+    INSERT INTO dbo.InventoryAudit (SkuId, WarehouseId, DeltaQty, Reason, AuditDate)
+    SELECT
+        x.SkuId,
+        x.WarehouseId,
+        -1 * x.ShippedQty                AS DeltaQty,
+        CONCAT('SHIP-', x.ShipmentId)    AS Reason,
+        GETDATE()                        AS AuditDate
+    FROM dbo.ShipmentLine x
+    INNER JOIN dbo.ProductCategoryLookup pcl ON pcl.CategoryId = x.CategoryId
+    WHERE x.ShipmentDate = CAST(GETDATE() AS DATE);
+END
+GO
+
+CREATE VIEW dbo.vw_ActiveCustomers
+AS
+SELECT
+    c.CustomerId,
+    c.FirstName,
+    c.LastName,
+    r.RegionName,
+    ct.CountryName
+FROM dbo.Customer c
+JOIN dbo.Region r        ON r.RegionId = c.RegionId
+JOIN dbo.CountryLookup ct ON ct.CountryId = r.CountryId
+WHERE c.IsDeleted = 0
+GO
+
+CREATE VIEW dbo.vw_ProductMargins
+AS
+SELECT
+    p.ProductId,
+    p.ProductName,
+    p.UnitCost,
+    p.UnitPrice,
+    ROUND((p.UnitPrice - p.UnitCost) / NULLIF(p.UnitPrice, 0) * 100, 2) AS MarginPct,
+    pcl.CategoryName
+FROM dbo.Product p
+LEFT JOIN dbo.ProductCategoryLookup pcl ON pcl.CategoryId = p.CategoryId
+GO
+`;
+
+
+/* ===== er.js ===== */
+/* ============================================================
+   ER Diagram — pure SVG renderer with pan/zoom/drag, built so
+   the whole diagram can be serialized straight to a high-res
+   PNG/JPG without any external rasterization library.
+   ============================================================ */
+
+const erState = {
+  zoom: 1,
+  pan: { x: 0, y: 0 },
+  positions: new Map(), // tableName -> {x,y}
+  dragging: null,
+  panDrag: null,
+  nodes: [],
+  edges: [],
+  boxW: 240,
+  rowH: 20,
+  headerH: 34
+};
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function tableColor(node) {
+  if (node.isWriteTarget) return { fill: 'rgba(255,107,107,0.10)', stroke: '#ff6b6b', header: '#ff6b6b' };
+  if (node.isLookup) return { fill: 'rgba(245,185,66,0.10)', stroke: '#f5b942', header: '#f5b942' };
+  return { fill: 'rgba(91,157,255,0.09)', stroke: '#5b9dff', header: '#5b9dff' };
+}
+
+function computeErModel() {
+  const p = state.parser;
+  const activeObj = state.activeObjectFilter;
+  const showLookups = document.getElementById('erLookupToggle').checked;
+
+  const relevantTables = new Set();
+  const writeTargets = new Set();
+  p.entries.forEach(e => {
+    if (activeObj && e.objectName !== activeObj) return;
+    if (e.usage.includes('Target Column') || e.usage.includes('Set Assignment')) writeTargets.add(e.table);
+  });
+
+  const tableCols = new Map(); // table -> Map(colName -> {usages:Set, isJoinKey:bool})
+  p.entries.forEach(e => {
+    if (activeObj && e.objectName !== activeObj) return;
+    const meta = p.tableMeta.get(e.table);
+    if (meta && meta.isLookup && !showLookups) return;
+    relevantTables.add(e.table);
+    if (!tableCols.has(e.table)) tableCols.set(e.table, new Map());
+    const cmap = tableCols.get(e.table);
+    if (!cmap.has(e.column)) cmap.set(e.column, { usages: new Set(), isJoinKey: false });
+    cmap.get(e.column).usages.add(e.usage);
+    if (e.usage === 'Join Key') cmap.get(e.column).isJoinKey = true;
+  });
+
+  const edges = p.relationships.filter(r => {
+    if (activeObj && r.objectName !== activeObj) return false;
+    const metaA = p.tableMeta.get(r.tableA), metaB = p.tableMeta.get(r.tableB);
+    if (!showLookups && ((metaA && metaA.isLookup) || (metaB && metaB.isLookup))) return false;
+    return relevantTables.has(r.tableA) && relevantTables.has(r.tableB);
+  });
+
+  edges.forEach(e => { relevantTables.add(e.tableA); relevantTables.add(e.tableB); });
+
+  const nodes = [...relevantTables].map(t => {
+    const meta = p.tableMeta.get(t) || { isLookup: false, isTemp: false };
+    const cols = tableCols.get(t) || new Map();
+    return {
+      name: t,
+      isLookup: meta.isLookup,
+      isTemp: meta.isTemp,
+      isWriteTarget: writeTargets.has(t),
+      columns: [...cols.entries()].map(([col, info]) => ({ col, isJoinKey: info.isJoinKey, usages: [...info.usages] })).slice(0, 14)
+    };
+  });
+
+  return { nodes, edges: dedupeEdges(edges) };
+}
+
+function dedupeEdges(edges) {
+  const seen = new Map();
+  edges.forEach(e => {
+    const key = [e.tableA, e.colA, e.tableB, e.colB].join('|');
+    if (!seen.has(key)) seen.set(key, e);
+  });
+  return [...seen.values()];
+}
+
+function layoutNodes(nodes, edges) {
+  const n = nodes.length;
+  if (n === 0) return;
+  // simple layered layout: nodes with more connections towards center, circular fallback
+  const degree = new Map(nodes.map(nd => [nd.name, 0]));
+  edges.forEach(e => {
+    degree.set(e.tableA, (degree.get(e.tableA) || 0) + 1);
+    degree.set(e.tableB, (degree.get(e.tableB) || 0) + 1);
+  });
+  const sorted = nodes.slice().sort((a, b) => (degree.get(b.name) || 0) - (degree.get(a.name) || 0));
+
+  const cols = Math.max(1, Math.ceil(Math.sqrt(n * 1.6)));
+  const gapX = erState.boxW + 90;
+  const gapY = 260;
+  sorted.forEach((nd, i) => {
+    if (erState.positions.has(nd.name)) return;
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    const offsetX = (row % 2 === 1) ? gapX / 2 : 0;
+    erState.positions.set(nd.name, { x: col * gapX + offsetX + 40, y: row * gapY + 40 });
+  });
+  // drop positions for nodes no longer present
+  [...erState.positions.keys()].forEach(k => { if (!nodes.find(nd => nd.name === k)) erState.positions.delete(k); });
+}
+
+function nodeHeight(node) {
+  return erState.headerH + Math.max(1, node.columns.length) * erState.rowH + 10;
+}
+
+function buildErDiagram(resetLayout) {
+  const wrap = document.getElementById('erCanvasWrap');
+  const model = computeErModel();
+  erState.nodes = model.nodes;
+  erState.edges = model.edges;
+  document.getElementById('erCount').textContent = `${model.nodes.length} tables · ${model.edges.length} relationships`;
+
+  if (resetLayout) erState.positions.clear();
+  layoutNodes(model.nodes, model.edges);
+
+  renderErSvg();
+}
+
+function renderErSvg() {
+  const wrap = document.getElementById('erCanvasWrap');
+  let svg = document.getElementById('erSvg');
+  if (svg) svg.remove();
+
+  if (!erState.nodes.length) {
+    if (!document.getElementById('erEmptyHint')) {
+      const hint = document.createElement('div');
+      hint.id = 'erEmptyHint';
+      hint.className = 'empty-hint';
+      hint.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;';
+      hint.innerHTML = 'No tables to diagram yet.<br>Parse some SQL to generate the ER view.';
+      wrap.appendChild(hint);
+    }
+    return;
+  }
+  const oldHint = document.getElementById('erEmptyHint');
+  if (oldHint) oldHint.remove();
+
+  svg = document.createElementNS(SVG_NS, 'svg');
+  svg.id = 'erSvg';
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+  svg.style.cursor = 'grab';
+
+  const defs = document.createElementNS(SVG_NS, 'defs');
+  defs.innerHTML = `
+    <marker id="arrowHead" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#5b6579"></path>
+    </marker>`;
+  svg.appendChild(defs);
+
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.id = 'erZoomGroup';
+  svg.appendChild(g);
+
+  // edges first (under nodes)
+  const edgeLayer = document.createElementNS(SVG_NS, 'g');
+  edgeLayer.id = 'erEdgeLayer';
+  g.appendChild(edgeLayer);
+  const nodeLayer = document.createElementNS(SVG_NS, 'g');
+  nodeLayer.id = 'erNodeLayer';
+  g.appendChild(nodeLayer);
+
+  erState.nodes.forEach(node => nodeLayer.appendChild(buildNodeGroup(node)));
+  erState.edges.forEach(edge => edgeLayer.appendChild(buildEdgePath(edge)));
+
+  wrap.appendChild(svg);
+  applyTransform();
+  wireErSvgInteractions(svg, g);
+  // background pan handled in wireErEvents (attached once to wrap)
+}
+
+function buildNodeGroup(node) {
+  const pos = erState.positions.get(node.name) || { x: 40, y: 40 };
+  const h = nodeHeight(node);
+  const color = tableColor(node);
+  const g = document.createElementNS(SVG_NS, 'g');
+  g.setAttribute('class', 'er-node');
+  g.setAttribute('data-table', node.name);
+  g.setAttribute('transform', `translate(${pos.x},${pos.y})`);
+  g.style.cursor = 'grab';
+
+  const rect = document.createElementNS(SVG_NS, 'rect');
+  rect.setAttribute('width', erState.boxW);
+  rect.setAttribute('height', h);
+  rect.setAttribute('rx', 10);
+  rect.setAttribute('fill', '#161b25');
+  rect.setAttribute('stroke', color.stroke);
+  rect.setAttribute('stroke-width', 1.4);
+  g.appendChild(rect);
+
+  const headerRect = document.createElementNS(SVG_NS, 'rect');
+  headerRect.setAttribute('width', erState.boxW);
+  headerRect.setAttribute('height', erState.headerH);
+  headerRect.setAttribute('rx', 10);
+  headerRect.setAttribute('fill', color.fill);
+  g.appendChild(headerRect);
+  const headerMask = document.createElementNS(SVG_NS, 'rect');
+  headerMask.setAttribute('y', erState.headerH - 10);
+  headerMask.setAttribute('width', erState.boxW);
+  headerMask.setAttribute('height', 10);
+  headerMask.setAttribute('fill', color.fill);
+  g.appendChild(headerMask);
+  const headerLine = document.createElementNS(SVG_NS, 'line');
+  headerLine.setAttribute('x1', 0); headerLine.setAttribute('x2', erState.boxW);
+  headerLine.setAttribute('y1', erState.headerH); headerLine.setAttribute('y2', erState.headerH);
+  headerLine.setAttribute('stroke', color.stroke); headerLine.setAttribute('stroke-width', 1);
+  g.appendChild(headerLine);
+
+  const title = document.createElementNS(SVG_NS, 'text');
+  title.setAttribute('x', 12); title.setAttribute('y', 22);
+  title.setAttribute('font-size', '12.5'); title.setAttribute('font-weight', '700');
+  title.setAttribute('fill', '#eef1f8'); title.setAttribute('font-family', 'Consolas,monospace');
+  title.textContent = truncate(node.name, 27);
+  g.appendChild(title);
+
+  const badges = [];
+  if (node.isLookup) badges.push({ t: 'LOOKUP', c: '#f5b942' });
+  if (node.isWriteTarget) badges.push({ t: 'WRITE', c: '#ff6b6b' });
+  if (node.isTemp) badges.push({ t: 'TEMP', c: '#7c869c' });
+  let bx = erState.boxW - 10;
+  badges.forEach(b => {
+    const bw = b.t.length * 6 + 12;
+    bx -= bw + 4;
+    const br = document.createElementNS(SVG_NS, 'rect');
+    br.setAttribute('x', bx); br.setAttribute('y', 8); br.setAttribute('width', bw); br.setAttribute('height', 15);
+    br.setAttribute('rx', 4); br.setAttribute('fill', b.c + '22'); br.setAttribute('stroke', b.c); br.setAttribute('stroke-width', 0.7);
+    g.appendChild(br);
+    const bt = document.createElementNS(SVG_NS, 'text');
+    bt.setAttribute('x', bx + bw / 2); bt.setAttribute('y', 18.5); bt.setAttribute('text-anchor', 'middle');
+    bt.setAttribute('font-size', '8'); bt.setAttribute('font-weight', '700'); bt.setAttribute('fill', b.c);
+    bt.textContent = b.t;
+    g.appendChild(bt);
+  });
+
+  node.columns.forEach((c, i) => {
+    const y = erState.headerH + i * erState.rowH + 14;
+    if (c.isJoinKey) {
+      const keyIcon = document.createElementNS(SVG_NS, 'text');
+      keyIcon.setAttribute('x', 12); keyIcon.setAttribute('y', y);
+      keyIcon.setAttribute('font-size', '10'); keyIcon.setAttribute('fill', '#3ecf8e');
+      keyIcon.textContent = '🔑';
+      g.appendChild(keyIcon);
+    }
+    const colText = document.createElementNS(SVG_NS, 'text');
+    colText.setAttribute('x', c.isJoinKey ? 26 : 12);
+    colText.setAttribute('y', y);
+    colText.setAttribute('font-size', '10.5');
+    colText.setAttribute('font-family', 'Consolas,monospace');
+    colText.setAttribute('fill', c.isJoinKey ? '#3ecf8e' : '#b7c0d3');
+    colText.textContent = truncate(c.col, c.isJoinKey ? 22 : 25);
+    g.appendChild(colText);
+
+    if (c.usages.some(u => u.includes('Transform') || u.includes('CASE'))) { /* handled via transformation badge below */ }
+    const usageTag = summarizeUsageTag(c.usages);
+    if (usageTag) {
+      const ut = document.createElementNS(SVG_NS, 'text');
+      ut.setAttribute('x', erState.boxW - 10); ut.setAttribute('y', y);
+      ut.setAttribute('font-size', '8.5'); ut.setAttribute('text-anchor', 'end');
+      ut.setAttribute('font-family', 'Consolas,monospace'); ut.setAttribute('fill', '#5b6579');
+      ut.textContent = usageTag;
+      g.appendChild(ut);
+    }
+  });
+
+  if (node.columns.length === 0) {
+    const noc = document.createElementNS(SVG_NS, 'text');
+    noc.setAttribute('x', 12); noc.setAttribute('y', erState.headerH + 16);
+    noc.setAttribute('font-size', '10'); noc.setAttribute('fill', '#5b6579'); noc.setAttribute('font-style', 'italic');
+    noc.textContent = '(no tracked columns)';
+    g.appendChild(noc);
+  }
+
+  return g;
+}
+
+function summarizeUsageTag(usages) {
+  if (usages.includes('Join Key')) return 'FK';
+  if (usages.some(u => u.includes('Target'))) return 'TGT';
+  if (usages.some(u => u.includes('Output'))) return 'OUT';
+  if (usages.includes('Filter (WHERE)')) return 'WHR';
+  return '';
+}
+
+function truncate(s, n) { return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+function boxCenter(name) {
+  const pos = erState.positions.get(name);
+  if (!pos) return { x: 0, y: 0 };
+  const node = erState.nodes.find(n => n.name === name);
+  const h = node ? nodeHeight(node) : 60;
+  return { x: pos.x + erState.boxW / 2, y: pos.y + h / 2, top: pos.y, bottom: pos.y + h, left: pos.x, right: pos.x + erState.boxW, h };
+}
+
+function buildEdgePath(edge) {
+  const a = boxCenter(edge.tableA);
+  const b = boxCenter(edge.tableB);
+  const dx = b.x - a.x, dy = b.y - a.y;
+  let x1, y1, x2, y2;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    x1 = dx > 0 ? a.right : a.left; y1 = a.y;
+    x2 = dx > 0 ? b.left : b.right; y2 = b.y;
+  } else {
+    x1 = a.x; y1 = dy > 0 ? a.bottom : a.top;
+    x2 = b.x; y2 = dy > 0 ? b.top : b.bottom;
+  }
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const path = document.createElementNS(SVG_NS, 'path');
+  const d = `M ${x1},${y1} C ${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', '#4a5468');
+  path.setAttribute('stroke-width', 1.4);
+  path.setAttribute('marker-end', 'url(#arrowHead)');
+  path.setAttribute('class', 'er-edge');
+  path.setAttribute('data-a', edge.tableA);
+  path.setAttribute('data-b', edge.tableB);
+
+  const label = document.createElementNS(SVG_NS, 'text');
+  label.setAttribute('x', mx); label.setAttribute('y', my - 4);
+  label.setAttribute('font-size', '9'); label.setAttribute('fill', '#7c869c');
+  label.setAttribute('text-anchor', 'middle'); label.setAttribute('font-family', 'Consolas,monospace');
+  label.setAttribute('class', 'er-edge-label');
+  label.setAttribute('data-a', edge.tableA); label.setAttribute('data-b', edge.tableB);
+  label.textContent = `${edge.colA} = ${edge.colB}`;
+
+  const wrapper = document.createElementNS(SVG_NS, 'g');
+  wrapper.appendChild(path);
+  wrapper.appendChild(label);
+  return wrapper;
+}
+
+function refreshEdges() {
+  const layer = document.getElementById('erEdgeLayer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  erState.edges.forEach(edge => layer.appendChild(buildEdgePath(edge)));
+}
+
+/* ---------------- Pan / zoom / drag ---------------- */
+function applyTransform() {
+  const g = document.getElementById('erZoomGroup');
+  if (!g) return;
+  g.setAttribute('transform', `translate(${erState.pan.x},${erState.pan.y}) scale(${erState.zoom})`);
+  document.getElementById('zoomPct').textContent = Math.round(erState.zoom * 100) + '%';
+}
+
+function wireErSvgInteractions(svg, g) {
+  svg.querySelectorAll('.er-node').forEach(nodeEl => {
+    nodeEl.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      const tableName = nodeEl.dataset.table;
+      const start = erState.positions.get(tableName);
+      erState.dragging = { tableName, startX: e.clientX, startY: e.clientY, origX: start.x, origY: start.y };
+      svg.style.cursor = 'grabbing';
+    });
+  });
+}
+
+function wireErEvents() {
+  const wrap = document.getElementById('erCanvasWrap');
+
+  wrap.addEventListener('mousedown', e => {
+    if (e.target.closest('.er-node')) return;
+    erState.panDrag = { startX: e.clientX, startY: e.clientY, origX: erState.pan.x, origY: erState.pan.y };
+    wrap.style.cursor = 'grabbing';
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (erState.dragging) {
+      const dx = (e.clientX - erState.dragging.startX) / erState.zoom;
+      const dy = (e.clientY - erState.dragging.startY) / erState.zoom;
+      erState.positions.set(erState.dragging.tableName, { x: erState.dragging.origX + dx, y: erState.dragging.origY + dy });
+      const nodeEl = document.querySelector(`.er-node[data-table="${cssEscape(erState.dragging.tableName)}"]`);
+      if (nodeEl) {
+        const p = erState.positions.get(erState.dragging.tableName);
+        nodeEl.setAttribute('transform', `translate(${p.x},${p.y})`);
+      }
+      refreshEdges();
+    } else if (erState.panDrag) {
+      erState.pan.x = erState.panDrag.origX + (e.clientX - erState.panDrag.startX);
+      erState.pan.y = erState.panDrag.origY + (e.clientY - erState.panDrag.startY);
+      applyTransform();
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    erState.dragging = null;
+    erState.panDrag = null;
+    wrap.style.cursor = 'default';
+  });
+
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = wrap.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    const newZoom = Math.min(2.5, Math.max(0.25, erState.zoom * factor));
+    const wx = (mx - erState.pan.x) / erState.zoom;
+    const wy = (my - erState.pan.y) / erState.zoom;
+    erState.pan.x = mx - wx * newZoom;
+    erState.pan.y = my - wy * newZoom;
+    erState.zoom = newZoom;
+    applyTransform();
+  }, { passive: false });
+
+  document.getElementById('zoomIn').addEventListener('click', () => { erState.zoom = Math.min(2.5, erState.zoom * 1.2); applyTransform(); });
+  document.getElementById('zoomOut').addEventListener('click', () => { erState.zoom = Math.max(0.25, erState.zoom / 1.2); applyTransform(); });
+  document.getElementById('resetLayoutBtn').addEventListener('click', () => { buildErDiagram(true); fitErView(); showToast('Layout reset.'); });
+  document.getElementById('fitViewBtn').addEventListener('click', fitErView);
+  document.getElementById('erLookupToggle').addEventListener('change', () => buildErDiagram(false));
+}
+
+function cssEscape(s) { return s.replace(/["\\]/g, '\\$&'); }
+
+function fitErView() {
+  const wrap = document.getElementById('erCanvasWrap');
+  if (!erState.nodes.length) return;
+  const rect = wrap.getBoundingClientRect();
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  erState.nodes.forEach(n => {
+    const c = boxCenter(n.name);
+    minX = Math.min(minX, c.left); minY = Math.min(minY, c.top);
+    maxX = Math.max(maxX, c.right); maxY = Math.max(maxY, c.bottom);
+  });
+  const contentW = maxX - minX + 80, contentH = maxY - minY + 80;
+  const zoom = Math.min(1.4, Math.max(0.25, Math.min(rect.width / contentW, rect.height / contentH)));
+  erState.zoom = zoom;
+  erState.pan.x = (rect.width - contentW * zoom) / 2 - minX * zoom + 40 * zoom;
+  erState.pan.y = (rect.height - contentH * zoom) / 2 - minY * zoom + 40 * zoom;
+  applyTransform();
+}
+
+/* ---------------- Export ER diagram as high-res PNG/JPG ---------------- */
+function exportErDiagramImage() {
+  const svgEl = document.getElementById('erSvg');
+  if (!svgEl || !erState.nodes.length) { showToast('Nothing to export — build the ER diagram first.', true); return; }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  erState.nodes.forEach(n => {
+    const c = boxCenter(n.name);
+    minX = Math.min(minX, c.left); minY = Math.min(minY, c.top);
+    maxX = Math.max(maxX, c.right); maxY = Math.max(maxY, c.bottom);
+  });
+  const pad = 60;
+  minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+  const w = maxX - minX, h = maxY - minY;
+
+  const clone = svgEl.cloneNode(true);
+  clone.removeAttribute('style');
+  clone.setAttribute('xmlns', SVG_NS);
+  clone.setAttribute('width', w);
+  clone.setAttribute('height', h);
+  clone.setAttribute('viewBox', `${minX} ${minY} ${w} ${h}`);
+  const zoomGroup = clone.querySelector('#erZoomGroup');
+  if (zoomGroup) zoomGroup.removeAttribute('transform');
+
+  const bg = document.createElementNS(SVG_NS, 'rect');
+  bg.setAttribute('x', minX); bg.setAttribute('y', minY); bg.setAttribute('width', w); bg.setAttribute('height', h);
+  bg.setAttribute('fill', '#0b0e14');
+  clone.insertBefore(bg, clone.firstChild);
+
+  const serializer = new XMLSerializer();
+  const svgString = serializer.serializeToString(clone);
+  const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+
+  const SCALE = 3; // high resolution multiplier
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = w * SCALE;
+    canvas.height = h * SCALE;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0b0e14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    URL.revokeObjectURL(url);
+
+    askFormatAndDownload(canvas);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); showToast('Export failed — try again.', true); };
+  img.src = url;
+}
+
+function askFormatAndDownload(canvas) {
+  const fmt = window.confirm('Click OK to export as PNG (lossless), or Cancel to export as high-quality JPG.');
+  const type = fmt ? 'image/png' : 'image/jpeg';
+  const ext = fmt ? 'png' : 'jpg';
+  const quality = fmt ? undefined : 0.95;
+  canvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `er_diagram_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Diagram exported as ' + ext.toUpperCase() + ' (' + canvas.width + '×' + canvas.height + 'px).');
+  }, type, quality);
+}
+
+
+/* ===== ui.js ===== */
+/* ============================================================
+   UI Controller — wires parser output to the DOM: table view,
+   filters, sorting, grouping, summary stats, toasts.
+   ============================================================ */
+
+const state = {
+  parser: new SqlLineageParser(),
+  sort: { key: 'table', dir: 1 },
+  filters: { search: '', table: '', usage: '', transform: '', object: '', lookupOnly: false, groupByTable: true },
+  activeObjectFilter: null
+};
+
+const USAGE_BADGE = {
+  'Output (SELECT)': 'b-select',
+  'Filter (WHERE)': 'b-filter',
+  'Join Key': 'b-join',
+  'Group By': 'b-group',
+  'Order By': 'b-order',
+  'Having': 'b-having',
+  'Target Column (INSERT)': 'b-target',
+  'Source for INSERT': 'b-direct',
+  'Set Assignment (UPDATE)': 'b-set',
+  'Source for UPDATE': 'b-direct'
+};
+
+function showToast(msg, isErr) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.toggle('err', !!isErr);
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* ---------------- Parsing entry point ---------------- */
+function runParse() {
+  const text = document.getElementById('sqlInput').value;
+  if (!text || !text.trim()) {
+    showToast('Paste some SQL first, or load the sample.', true);
+    return;
+  }
+  const btn = document.getElementById('parseBtn');
+  const origHtml = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    try {
+      state.parser.reset();
+      const count = state.parser.addSourceText(text, 'pasted.sql');
+      afterParse(count);
+    } catch (e) {
+      console.error(e);
+      showToast('Parse error: ' + e.message, true);
+    } finally {
+      btn.innerHTML = origHtml;
+      btn.disabled = false;
+    }
+  }, 30);
+}
+
+function afterParse(newCount) {
+  renderObjectsList();
+  populateFilterDropdowns();
+  renderTable();
+  renderSummary();
+  buildErDiagram(true);
+  updateHeaderStats();
+  showToast(`Parsed ${newCount} object(s) — ${state.parser.entries.length} lineage rows generated.`);
+}
+
+function updateHeaderStats() {
+  document.getElementById('statObjects').textContent = state.parser.objects.length;
+  document.getElementById('statTables').textContent = state.parser.tableMeta.size;
+  const cols = new Set();
+  state.parser.entries.forEach(e => cols.add(e.table + '.' + e.column));
+  document.getElementById('statCols').textContent = cols.size;
+  document.getElementById('statRels').textContent = state.parser.relationships.length;
+}
+
+/* ---------------- Sidebar objects list ---------------- */
+function renderObjectsList() {
+  const el = document.getElementById('objectsList');
+  const objs = state.parser.objects;
+  document.getElementById('objCount').textContent = objs.length ? `(${objs.length})` : '';
+  if (!objs.length) {
+    el.innerHTML = '<div class="empty-hint">No objects parsed yet.<br>Paste SQL or drop files, then click <b>Analyze SQL</b>.</div>';
+    return;
+  }
+  const tagClass = { PROCEDURE: 'proc', VIEW: 'view', FUNCTION: 'func', SCRIPT: 'script' };
+  el.innerHTML = objs.map((o, i) => {
+    const tblCount = o.tables.size;
+    const rowCount = state.parser.entries.filter(e => e.objectName === o.name).length;
+    return `<div class="object-card" data-obj="${escapeHtml(o.name)}">
+      <div class="oname">${escapeHtml(o.name)}</div>
+      <div class="ometa">
+        <span class="tag ${tagClass[o.type] || 'script'}">${o.type}</span>
+        <span class="tag" style="background:var(--bg-3);color:var(--text-2);">${tblCount} tbl</span>
+        <span class="tag" style="background:var(--bg-3);color:var(--text-2);">${rowCount} rows</span>
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.object-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const name = card.dataset.obj;
+      if (state.activeObjectFilter === name) {
+        state.activeObjectFilter = null;
+        card.classList.remove('dim');
+        el.querySelectorAll('.object-card').forEach(c => c.classList.remove('dim'));
+      } else {
+        state.activeObjectFilter = name;
+        el.querySelectorAll('.object-card').forEach(c => c.classList.toggle('dim', c.dataset.obj !== name));
+      }
+      document.getElementById('filterObject').value = state.activeObjectFilter || '';
+      state.filters.object = state.activeObjectFilter || '';
+      renderTable();
+      buildErDiagram(false);
+    });
+  });
+}
+
+/* ---------------- Filter dropdown population ---------------- */
+function populateFilterDropdowns() {
+  const tables = state.parser.getTableList().map(t => t.name);
+  const usages = [...new Set(state.parser.entries.map(e => e.usage))].sort();
+  const transforms = [...new Set(state.parser.entries.map(e => e.transformation))].sort();
+  const objects = state.parser.objects.map(o => o.name);
+
+  fillSelect('filterTable', tables);
+  fillSelect('filterUsage', usages);
+  fillSelect('filterTransform', transforms);
+  fillSelect('filterObject', objects);
+}
+function fillSelect(id, values) {
+  const sel = document.getElementById(id);
+  const current = sel.value;
+  const placeholder = sel.options[0];
+  sel.innerHTML = '';
+  sel.appendChild(placeholder);
+  values.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  });
+  if (values.includes(current)) sel.value = current;
+}
+
+/* ---------------- Table rendering ---------------- */
+function getFilteredEntries() {
+  const f = state.filters;
+  const search = f.search.trim().toLowerCase();
+  return state.parser.entries.filter(e => {
+    if (f.table && e.table !== f.table) return false;
+    if (f.usage && e.usage !== f.usage) return false;
+    if (f.transform && e.transformation !== f.transform) return false;
+    if (f.object && e.objectName !== f.object) return false;
+    if (f.lookupOnly && !e.isLookup) return false;
+    if (search) {
+      const hay = `${e.table} ${e.column} ${e.usage} ${e.transformation} ${e.expression} ${e.objectName} ${e.mapsTo}`.toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+}
+
+function sortEntries(rows) {
+  const { key, dir } = state.sort;
+  return rows.slice().sort((a, b) => {
+    const av = (a[key] || '').toString().toLowerCase();
+    const bv = (b[key] || '').toString().toLowerCase();
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return 0;
+  });
+}
+
+function renderTable() {
+  let rows = getFilteredEntries();
+  rows = sortEntries(rows);
+  document.getElementById('rowCount').textContent = `${rows.length} row${rows.length === 1 ? '' : 's'}`;
+  const tbody = document.getElementById('lineageBody');
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--text-2);padding:34px;">No matching rows. Try adjusting filters, or parse some SQL first.</td></tr>`;
+    return;
+  }
+
+  if (state.filters.groupByTable) {
+    const groups = new Map();
+    rows.forEach(r => {
+      if (!groups.has(r.table)) groups.set(r.table, []);
+      groups.get(r.table).push(r);
+    });
+    const sortedTables = [...groups.keys()].sort();
+    let html = '';
+    sortedTables.forEach(t => {
+      const grp = groups.get(t);
+      const isLookup = grp[0].isLookup;
+      html += `<tr class="grp-row"><td colspan="9">${escapeHtml(t)}${isLookup ? ' <span class="lookup-star">★ lookup</span>' : ''}<span class="cnt">${grp.length} row${grp.length===1?'':'s'}</span></td></tr>`;
+      grp.forEach(r => html += rowHtml(r, true));
+    });
+    tbody.innerHTML = html;
+  } else {
+    tbody.innerHTML = rows.map(r => rowHtml(r, false)).join('');
+  }
+}
+
+function rowHtml(r, hideTable) {
+  const badgeClass = USAGE_BADGE[r.usage] || 'b-direct';
+  return `<tr>
+    <td class="strong mono">${hideTable ? '' : escapeHtml(r.table)}</td>
+    <td class="mono">${escapeHtml(r.column)}</td>
+    <td><span class="badge ${badgeClass}">${escapeHtml(r.usage)}</span></td>
+    <td><span class="badge b-direct" style="background:var(--bg-3);color:var(--text-1);">${escapeHtml(r.transformation)}</span></td>
+    <td>${r.expression ? `<code class="expr-code" title="${escapeHtml(r.expression)}">${escapeHtml(r.expression)}</code>` : ''}</td>
+    <td class="mono">${escapeHtml(r.mapsTo)}</td>
+    <td>${escapeHtml(r.objectName)}</td>
+    <td>${escapeHtml(r.statementType)}</td>
+    <td>${r.isLookup ? '<span class="badge b-lookup">★ Lookup</span>' : ''}</td>
+  </tr>`;
+}
+
+/* ---------------- Summary panel ---------------- */
+function renderSummary() {
+  const el = document.getElementById('summaryScroll');
+  const p = state.parser;
+  if (!p.objects.length) {
+    el.innerHTML = '<div class="empty-hint" style="padding:60px 0;">Parse some SQL to see summary statistics.</div>';
+    return;
+  }
+  const tables = p.getTableList();
+  const lookupTables = tables.filter(t => t.isLookup);
+  const tempTables = tables.filter(t => t.isTemp);
+  const cols = new Set(); p.entries.forEach(e => cols.add(e.table + '.' + e.column));
+  const transformCounts = {};
+  p.entries.forEach(e => { transformCounts[e.transformation] = (transformCounts[e.transformation] || 0) + 1; });
+  const usageCounts = {};
+  p.entries.forEach(e => { usageCounts[e.usage] = (usageCounts[e.usage] || 0) + 1; });
+
+  const metric = (val, label) => `<div class="metric-card"><div class="mval">${val}</div><div class="mlabel">${label}</div></div>`;
+  const chip = (label, n) => `<div class="chip"><b>${escapeHtml(label)}</b><span class="n">${n}</span></div>`;
+
+  let html = '<div class="summary-grid">';
+  html += metric(p.objects.length, 'SQL Objects Parsed');
+  html += metric(tables.length, 'Distinct Tables');
+  html += metric(cols.size, 'Distinct Table.Column Pairs');
+  html += metric(p.relationships.length, 'Join Relationships');
+  html += metric(lookupTables.length, 'Lookup / Reference Tables');
+  html += metric(tempTables.length, 'Temp Tables / Table Vars');
+  html += '</div>';
+
+  html += '<div class="summary-section"><h3>Transformation Types Used</h3><div class="chip-row">';
+  Object.entries(transformCounts).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => html += chip(k, v));
+  html += '</div></div>';
+
+  html += '<div class="summary-section"><h3>Column Usage Breakdown</h3><div class="chip-row">';
+  Object.entries(usageCounts).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => html += chip(k, v));
+  html += '</div></div>';
+
+  html += '<div class="summary-section"><h3>Lookup / Reference Tables Detected</h3><div class="chip-row">';
+  if (lookupTables.length) lookupTables.forEach(t => html += chip(t.name, t.columns.size + ' cols'));
+  else html += '<span style="color:var(--text-2);font-size:12px;">None detected.</span>';
+  html += '</div></div>';
+
+  html += '<div class="summary-section"><h3>All Tables Referenced</h3><div class="chip-row">';
+  tables.forEach(t => html += chip(t.name + (t.isLookup ? ' ★' : '') + (t.isTemp ? ' ⌁' : ''), t.objects.size + ' obj'));
+  html += '</div></div>';
+
+  el.innerHTML = html;
+}
+
+/* ---------------- Excel export ---------------- */
+function exportToExcel() {
+  if (!state.parser.entries.length) { showToast('Nothing to export yet — parse some SQL first.', true); return; }
+  const wb = XLSX.utils.book_new();
+
+  const lineageRows = getFilteredEntries().map(e => ({
+    'Table': e.table, 'Column': e.column, 'Usage': e.usage, 'Transformation': e.transformation,
+    'Expression': e.expression, 'Maps To': e.mapsTo, 'Source Object': e.objectName,
+    'Object Type': e.objectType, 'Statement Type': e.statementType, 'Is Lookup Table': e.isLookup ? 'Yes' : 'No',
+    'Is Temp Table': e.isTemp ? 'Yes' : 'No'
+  }));
+  const ws1 = XLSX.utils.json_to_sheet(lineageRows);
+  ws1['!cols'] = [{ wch: 22 }, { wch: 18 }, { wch: 20 }, { wch: 24 }, { wch: 40 }, { wch: 26 }, { wch: 26 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Column Lineage');
+
+  const relRows = state.parser.relationships.map(r => ({
+    'Table A': r.tableA, 'Column A': r.colA, 'Table B': r.tableB, 'Column B': r.colB, 'Source Object': r.objectName
+  }));
+  const ws2 = XLSX.utils.json_to_sheet(relRows);
+  ws2['!cols'] = [{ wch: 24 }, { wch: 16 }, { wch: 24 }, { wch: 16 }, { wch: 26 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Table Relationships');
+
+  const tableRows = state.parser.getTableList().map(t => ({
+    'Table': t.name, 'Is Lookup Table': t.isLookup ? 'Yes' : 'No', 'Is Temp / Table Var': t.isTemp ? 'Yes' : 'No',
+    'Distinct Columns Referenced': t.columns.size, 'Times Joined': t.joinCount, 'Used In # Objects': t.objects.size,
+    'Used In Objects': [...t.objects].join(', ')
+  }));
+  const ws3 = XLSX.utils.json_to_sheet(tableRows);
+  ws3['!cols'] = [{ wch: 26 }, { wch: 16 }, { wch: 18 }, { wch: 22 }, { wch: 14 }, { wch: 16 }, { wch: 50 }];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Tables Summary');
+
+  const objRows = state.parser.objects.map(o => ({
+    'Object Name': o.name, 'Type': o.type, 'Tables Referenced': [...o.tables].join(', '),
+    'Lineage Rows': state.parser.entries.filter(e => e.objectName === o.name).length
+  }));
+  const ws4 = XLSX.utils.json_to_sheet(objRows);
+  ws4['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 60 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Objects');
+
+  const fname = `sql_lineage_export_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.xlsx`;
+  XLSX.writeFile(wb, fname);
+  showToast('Excel file exported: ' + fname);
+}
+
+/* ---------------- File input / drag-drop ---------------- */
+function wireInputEvents() {
+  document.getElementById('parseBtn').addEventListener('click', runParse);
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('sqlInput').value = '';
+    state.parser.reset();
+    state.activeObjectFilter = null;
+    afterParse(0);
+    showToast('Cleared.');
+  });
+  document.getElementById('sampleBtn').addEventListener('click', () => {
+    document.getElementById('sqlInput').value = SAMPLE_SQL;
+    showToast('Sample SQL loaded — click Analyze SQL.');
+  });
+
+  const dz = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  document.getElementById('browseLink').addEventListener('click', () => fileInput.click());
+  dz.addEventListener('click', () => fileInput.click());
+  ['dragenter', 'dragover'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(evt => dz.addEventListener(evt, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+  fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+  function handleFiles(fileList) {
+    const files = [...fileList].filter(f => /\.(sql|txt)$/i.test(f.name));
+    if (!files.length) { showToast('Drop .sql or .txt files.', true); return; }
+    let remaining = files.length;
+    const box = document.getElementById('sqlInput');
+    files.forEach(f => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        box.value += (box.value.trim() ? '\n\nGO\n\n' : '') + `-- source: ${f.name}\n` + reader.result;
+        remaining--;
+        if (remaining === 0) showToast(`Loaded ${files.length} file(s). Click Analyze SQL.`);
+      };
+      reader.readAsText(f);
+    });
+  }
+
+  // sorting
+  document.querySelectorAll('table.lineage-table thead th').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.key;
+      if (!key) return;
+      if (state.sort.key === key) state.sort.dir *= -1;
+      else { state.sort.key = key; state.sort.dir = 1; }
+      document.querySelectorAll('table.lineage-table thead th').forEach(h => h.classList.remove('sorted'));
+      th.classList.add('sorted');
+      renderTable();
+    });
+  });
+
+  // filters
+  document.getElementById('searchInput').addEventListener('input', e => { state.filters.search = e.target.value; renderTable(); });
+  document.getElementById('filterTable').addEventListener('change', e => { state.filters.table = e.target.value; renderTable(); });
+  document.getElementById('filterUsage').addEventListener('change', e => { state.filters.usage = e.target.value; renderTable(); });
+  document.getElementById('filterTransform').addEventListener('change', e => { state.filters.transform = e.target.value; renderTable(); });
+  document.getElementById('filterObject').addEventListener('change', e => {
+    state.filters.object = e.target.value;
+    state.activeObjectFilter = e.target.value || null;
+    document.querySelectorAll('.object-card').forEach(c => c.classList.toggle('dim', !!(state.activeObjectFilter && c.dataset.obj !== state.activeObjectFilter)));
+    renderTable();
+    buildErDiagram(false);
+  });
+  document.getElementById('filterLookupOnly').addEventListener('change', e => { state.filters.lookupOnly = e.target.checked; renderTable(); });
+  document.getElementById('groupByTable').addEventListener('change', e => { state.filters.groupByTable = e.target.checked; renderTable(); });
+
+  // tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'erTab') setTimeout(() => fitErView(), 30);
+    });
+  });
+
+  document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
+  document.getElementById('exportImgBtn').addEventListener('click', exportErDiagramImage);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  wireInputEvents();
+  wireErEvents();
+});
+
+</script>
+</body>
+</html>
