@@ -1,0 +1,1970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReconLedger — Trade File Reconciliation &amp; Validation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+:root{
+  --bg:#0A0E14;
+  --bg-elev:#0D1219;
+  --surface:#131A24;
+  --surface-2:#1A2330;
+  --surface-3:#212C3B;
+  --border:#243040;
+  --border-soft:#1B2530;
+  --text:#E7ECF3;
+  --text-dim:#94A3B8;
+  --text-faint:#57657A;
+  --accent:#35D7BE;
+  --accent-dim:#1E4F49;
+  --accent-2:#5B9BFF;
+  --accent-2-dim:#1F3355;
+  --ok:#33D17A;
+  --ok-dim:#123424;
+  --warn:#F2B84B;
+  --warn-dim:#4A3617;
+  --crit:#FF5C5C;
+  --crit-dim:#4A2129;
+  --purple:#B58CF5;
+  --purple-dim:#3B3159;
+  --radius:10px;
+  --radius-sm:6px;
+  --shadow-lg:0 20px 60px -20px rgba(0,0,0,.6);
+  --mono:'IBM Plex Mono', ui-monospace, monospace;
+  --display:'Space Grotesk', sans-serif;
+  --body:'Inter', sans-serif;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 600px at 88% -10%, rgba(53,215,190,.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 15%, rgba(91,155,255,.06), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:var(--body);
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent-dim);color:var(--text);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface-3);border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--border);}
+a{color:inherit;}
+button{font-family:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.hidden{display:none !important;}
+.mono{font-family:var(--mono);}
+
+/* ---------- shell ---------- */
+.app{display:flex;flex-direction:column;min-height:100vh;}
+
+.header{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;gap:16px;
+  padding:13px 24px;
+  background:rgba(10,14,20,.9);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border-soft);
+}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;}
+.brand-mark{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(155deg,var(--accent) 0%, var(--accent-2) 130%);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  box-shadow:0 6px 18px -6px rgba(53,215,190,.5);
+}
+.brand-mark svg{width:19px;height:19px;}
+.brand-text h1{font-family:var(--display);font-size:17px;font-weight:700;margin:0;letter-spacing:.2px;}
+.brand-text p{margin:0;font-size:11px;color:var(--text-faint);font-family:var(--mono);letter-spacing:.3px;}
+
+.header-actions{display:flex;align-items:center;gap:10px;}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:9px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface-2);color:var(--text);
+  font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;
+  transition:.15s border-color, .15s background, .15s transform;
+}
+.btn svg{width:14px;height:14px;flex-shrink:0;}
+.btn:hover{border-color:var(--accent);background:var(--surface-3);}
+.btn:active{transform:translateY(1px);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#04211D;}
+.btn-primary:hover{background:#4EE3CB;border-color:#4EE3CB;}
+.btn-danger{background:transparent;border-color:var(--crit);color:var(--crit);}
+.btn-danger:hover{background:var(--crit-dim);}
+.btn-ok{background:transparent;border-color:var(--ok);color:var(--ok);}
+.btn-ok:hover{background:var(--ok-dim);}
+.btn-ghost{background:transparent;}
+.btn-sm{padding:6px 10px;font-size:12px;border-radius:7px;}
+.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none;}
+.pill{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:99px;font-weight:600;border:1px solid transparent;}
+.pill-ok{background:var(--ok-dim);color:var(--ok);border-color:rgba(51,209,122,.35);}
+.pill-warn{background:var(--warn-dim);color:var(--warn);border-color:rgba(242,184,75,.35);}
+.pill-crit{background:var(--crit-dim);color:var(--crit);border-color:rgba(255,92,92,.35);}
+.pill-neutral{background:var(--surface-3);color:var(--text-dim);}
+
+/* tabs */
+.tabbar{display:flex;align-items:center;gap:4px;padding:0 24px;border-bottom:1px solid var(--border-soft);background:var(--bg-elev);overflow-x:auto;}
+.tab{display:flex;align-items:center;gap:7px;padding:13px 16px;font-size:13px;font-weight:600;color:var(--text-faint);border:none;background:none;cursor:pointer;position:relative;white-space:nowrap;}
+.tab svg{width:15px;height:15px;}
+.tab:hover{color:var(--text-dim);}
+.tab.active{color:var(--text);}
+.tab.active::after{content:'';position:absolute;left:14px;right:14px;bottom:-1px;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:2px;}
+.tab-flag{width:7px;height:7px;border-radius:50%;background:var(--crit);margin-left:2px;}
+
+.main{flex:1;padding:22px 24px;max-width:1560px;width:100%;margin:0 auto;}
+
+/* run bar */
+.runbar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:11px 24px;border-bottom:1px solid var(--border-soft);background:rgba(19,26,36,.5);
+}
+.runbar .rb-info{font-size:12px;color:var(--text-faint);}
+.runbar .spacer{flex:1;}
+
+/* panels & cards */
+.panel{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);margin-bottom:18px;overflow:hidden;}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border-soft);flex-wrap:wrap;}
+.panel-head h3{margin:0;font-family:var(--display);font-size:14.5px;font-weight:600;}
+.panel-head p{margin:2px 0 0;font-size:11.5px;color:var(--text-faint);}
+.panel-body{padding:16px 18px;}
+.panel-actions{display:flex;gap:8px;align-items:center;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+@media(max-width:1000px){.grid2,.grid3{grid-template-columns:1fr;}}
+
+/* kpis */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border-soft);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;background:var(--accent-color,var(--accent));opacity:.75;}
+.kpi-val{font-family:var(--display);font-size:26px;font-weight:700;line-height:1;margin-bottom:6px;}
+.kpi-lbl{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.5px;font-weight:600;}
+
+/* status banner */
+.status-banner{display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:var(--radius);margin-bottom:18px;border:1px solid;}
+.status-banner.ok{background:var(--ok-dim);border-color:rgba(51,209,122,.35);}
+.status-banner.warn{background:var(--warn-dim);border-color:rgba(242,184,75,.35);}
+.status-banner.crit{background:var(--crit-dim);border-color:rgba(255,92,92,.35);}
+.status-banner .icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.status-banner.ok .icon{background:rgba(51,209,122,.18);color:var(--ok);}
+.status-banner.warn .icon{background:rgba(242,184,75,.18);color:var(--warn);}
+.status-banner.crit .icon{background:rgba(255,92,92,.18);color:var(--crit);}
+.status-banner .icon svg{width:20px;height:20px;}
+.status-banner h4{margin:0 0 3px;font-family:var(--display);font-size:15px;}
+.status-banner p{margin:0;font-size:12.5px;color:var(--text-dim);}
+.status-banner ul{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--text-dim);}
+
+/* forms */
+label.field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--text-dim);margin-bottom:12px;}
+label.field span.lbl{font-weight:600;color:var(--text);font-size:12.5px;}
+label.field span.hint{font-size:11px;color:var(--text-faint);font-weight:400;}
+input[type=text],input[type=number],input[type=url],input[type=email],select,textarea{
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:7px;
+  padding:9px 11px;font-size:12.5px;font-family:var(--body);outline:none;width:100%;
+}
+input.mono,select.mono{font-family:var(--mono);}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:70px;}
+.checkbox-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim);}
+.checkbox-row input{accent-color:var(--accent);width:15px;height:15px;}
+.inline-fields{display:flex;gap:10px;flex-wrap:wrap;}
+.inline-fields > *{flex:1;min-width:130px;}
+
+/* stage chips */
+.stage-strip{display:flex;align-items:center;gap:0;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;}
+.stage-chip{
+  display:flex;flex-direction:column;gap:4px;padding:12px 16px;border-radius:10px;background:var(--surface-2);
+  border:1.5px solid var(--border);min-width:170px;position:relative;
+}
+.stage-chip.is-output{border-color:var(--purple);}
+.stage-chip .sc-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.stage-chip .sc-name{font-family:var(--display);font-weight:600;font-size:13px;}
+.stage-chip .sc-tag{font-size:9.5px;font-family:var(--mono);color:var(--purple);text-transform:uppercase;}
+.stage-chip .sc-file{font-size:10.5px;color:var(--text-faint);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;}
+.stage-chip .sc-remove{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--text-faint);cursor:pointer;padding:2px;}
+.stage-chip .sc-remove:hover{color:var(--crit);}
+.stage-arrow{color:var(--text-faint);flex-shrink:0;padding:0 6px;}
+.stage-arrow svg{width:16px;height:16px;}
+.stage-drop{border:1.5px dashed var(--border);border-radius:8px;padding:8px;text-align:center;cursor:pointer;font-size:11px;color:var(--text-faint);margin-top:6px;}
+.stage-drop:hover,.stage-drop.drag{border-color:var(--accent);color:var(--accent);}
+.stage-add{display:flex;align-items:center;justify-content:center;min-width:120px;border:1.5px dashed var(--border);border-radius:10px;cursor:pointer;color:var(--text-faint);gap:6px;font-size:12px;font-weight:600;padding:12px;}
+.stage-add:hover{border-color:var(--accent);color:var(--accent);}
+
+/* generic table */
+.table-wrap{overflow-x:auto;}
+table.dt{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.dt thead th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:10px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;}
+table.dt thead th.sortable{cursor:pointer;user-select:none;}
+table.dt thead th.sortable:hover{color:var(--text);}
+table.dt tbody td{padding:9px 12px;border-bottom:1px solid var(--border-soft);vertical-align:top;color:var(--text-dim);}
+table.dt tbody tr:hover{background:var(--surface-2);}
+table.dt tbody tr:last-child td{border-bottom:none;}
+table.editable td{padding:6px 8px;}
+table.editable input,table.editable select{padding:6px 8px;font-size:12px;}
+.rm-row{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:4px;}
+.rm-row:hover{color:var(--crit);}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:99px;font-size:10.5px;font-weight:600;font-family:var(--mono);white-space:nowrap;}
+.badge-ok{background:var(--ok-dim);color:var(--ok);}
+.badge-warn{background:var(--warn-dim);color:var(--warn);}
+.badge-crit{background:var(--crit-dim);color:var(--crit);}
+.badge-neutral{background:var(--surface-3);color:var(--text-dim);}
+.badge-purple{background:var(--purple-dim);color:var(--purple);}
+.badge-blue{background:var(--accent-2-dim);color:var(--accent-2);}
+.diff-old{color:var(--crit);text-decoration:line-through;opacity:.75;}
+.diff-new{color:var(--ok);}
+
+.table-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border-soft);flex-wrap:wrap;gap:10px;}
+.table-footer .info{font-size:12px;color:var(--text-faint);}
+.pager{display:flex;align-items:center;gap:6px;}
+.pager button{width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);cursor:pointer;font-size:12px;}
+.pager button:hover:not(:disabled){border-color:var(--accent);color:var(--text);}
+.pager button:disabled{opacity:.35;cursor:not-allowed;}
+
+/* filter bar */
+.filterbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border-soft);}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;flex:1;min-width:180px;max-width:320px;}
+.search-box svg{width:14px;height:14px;color:var(--text-faint);flex-shrink:0;}
+.search-box input{border:none;background:none;outline:none;color:var(--text);font-size:13px;width:100%;}
+.msel{position:relative;}
+.msel-btn{display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text-dim);font-size:12.5px;font-weight:600;cursor:pointer;}
+.msel-btn svg{width:12px;height:12px;}
+.msel-btn.has-filter{border-color:var(--accent);color:var(--accent);background:var(--accent-dim);}
+.msel-panel{position:absolute;top:calc(100% + 8px);left:0;width:250px;max-height:300px;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);display:none;flex-direction:column;z-index:55;overflow:hidden;}
+.msel-panel.open{display:flex;}
+.msel-list{overflow-y:auto;padding:5px;flex:1;}
+.msel-opt{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;}
+.msel-opt:hover{background:var(--surface-3);}
+.msel-opt .cnt{margin-left:auto;font-size:10.5px;color:var(--text-faint);}
+.msel-actions{display:flex;gap:6px;padding:7px 8px;border-bottom:1px solid var(--border-soft);}
+.msel-actions button{flex:1;padding:5px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text-dim);font-size:11px;cursor:pointer;font-weight:600;}
+
+/* console */
+.run-console{background:#080B10;border:1px solid var(--border-soft);border-radius:var(--radius);padding:12px 16px;font-family:var(--mono);font-size:11.5px;max-height:220px;overflow-y:auto;margin-bottom:16px;}
+.run-console .ln{padding:2px 0;color:var(--text-dim);}
+.run-console .ln.ok{color:var(--ok);}
+.run-console .ln.warn{color:var(--warn);}
+.run-console .ln.crit{color:var(--crit);}
+.run-console .ln .t{color:var(--text-faint);margin-right:8px;}
+
+/* stamp */
+.stamp{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:2px solid;border-radius:8px;font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:1px;text-transform:uppercase;transform:rotate(-2deg);}
+.stamp.approved{color:var(--ok);border-color:var(--ok);}
+.stamp.blocked{color:var(--crit);border-color:var(--crit);}
+.stamp.pending{color:var(--warn);border-color:var(--warn);}
+.stamp.overridden{color:var(--accent-2);border-color:var(--accent-2);}
+
+/* lineage pipeline */
+#pipelineHost{width:100%;height:340px;}
+.trace-search{display:flex;gap:10px;margin-bottom:16px;}
+.trace-timeline{display:flex;gap:0;overflow-x:auto;padding-bottom:8px;}
+.trace-card{min-width:220px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:10px;padding:14px;flex-shrink:0;}
+.trace-card.missing{border-color:var(--crit);background:var(--crit-dim);}
+.trace-card h5{margin:0 0 10px;font-family:var(--display);font-size:12.5px;display:flex;align-items:center;justify-content:space-between;}
+.trace-card .tf-row{display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:4px 0;border-top:1px solid var(--border-soft);}
+.trace-card .tf-row:first-of-type{border-top:none;}
+.trace-card .tf-k{color:var(--text-faint);}
+.trace-card .tf-v{font-family:var(--mono);color:var(--text);text-align:right;word-break:break-all;}
+.trace-card .tf-v.changed{color:var(--warn);}
+.trace-arrow{display:flex;align-items:center;padding:0 10px;color:var(--text-faint);flex-shrink:0;}
+.trace-arrow svg{width:18px;height:18px;}
+
+/* history */
+.history-card{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border-soft);border-radius:10px;margin-bottom:10px;background:var(--surface-2);flex-wrap:wrap;}
+.history-card .hc-id{font-family:var(--mono);font-size:12px;color:var(--text-faint);}
+.history-card .hc-time{font-size:11.5px;color:var(--text-faint);}
+.history-card .hc-kpis{display:flex;gap:14px;font-size:11.5px;color:var(--text-dim);margin-left:auto;}
+.history-card .hc-kpis b{color:var(--text);}
+.history-card input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;}
+
+/* empty state */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px;}
+.empty-badge{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:14px;}
+.empty h2{font-family:var(--display);font-size:28px;margin:0 0 12px;max-width:600px;line-height:1.3;}
+.empty p{color:var(--text-dim);max-width:520px;margin:0 0 22px;font-size:14px;line-height:1.6;}
+
+.footer-note{text-align:center;padding:18px;font-size:11px;color:var(--text-faint);font-family:var(--mono);}
+
+/* toast */
+#toastHost{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;gap:8px;z-index:200;}
+.toast{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:8px;padding:11px 16px;font-size:12.5px;box-shadow:var(--shadow-lg);min-width:220px;max-width:340px;animation:toastIn .2s ease-out;}
+.toast.err{border-left-color:var(--crit);}
+.toast.warn{border-left-color:var(--warn);}
+@keyframes toastIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(5,7,10,.72);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal-overlay.open{display:flex;}
+.modal{width:100%;max-width:480px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);max-height:85vh;display:flex;flex-direction:column;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-soft);}
+.modal-head h3{margin:0;font-family:var(--display);font-size:16px;}
+.modal-close{background:none;border:none;color:var(--text-faint);cursor:pointer;padding:4px;}
+.modal-body{padding:18px 20px;overflow-y:auto;}
+
+.section-note{font-size:11.5px;color:var(--text-faint);background:var(--surface-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5;}
+.section-note b{color:var(--text-dim);}
+hr.sep{border:none;border-top:1px solid var(--border-soft);margin:18px 0;}
+</style>
+</head>
+<body>
+<input type="file" id="stageFileInput" accept=".xlsx,.xls,.csv,.txt" style="display:none">
+<input type="file" id="configFileInput" accept=".json" style="display:none">
+<input type="file" id="runFileInput" accept=".json" style="display:none">
+
+<div class="app">
+
+  <header class="header">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 3h6l1 3h3v3l-3 1v9a2 2 0 01-2 2H10a2 2 0 01-2-2v-9L5 9V6h3l1-3z" fill="#04211D"/><path d="M9 13l2 2 4-4" stroke="#35D7BE" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>ReconLedger</h1>
+        <p>trade file reconciliation &amp; validation</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="pill pill-neutral" id="lastRunPill">No run yet</span>
+      <button class="btn" id="btnConfigExport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v13m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        Save config
+      </button>
+      <button class="btn" id="btnConfigImport">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21V8m0 0l-4 4m4-4l4 4M4 4h16"/></svg>
+        Load config
+      </button>
+      <button class="btn btn-primary" id="btnRun">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#04211D" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg>
+        Run reconciliation
+      </button>
+    </div>
+  </header>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" data-tab="setup">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Setup
+    </button>
+    <button class="tab" data-tab="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+      Dashboard
+    </button>
+    <button class="tab" data-tab="exceptions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4m0 4h.01M10.3 3.9L2.7 17a2 2 0 001.7 3h15.2a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+      Exceptions <span class="tab-count mono" id="cntExceptions" style="font-size:10px;color:var(--text-faint);background:var(--surface-2);padding:1px 6px;border-radius:99px;">0</span>
+    </button>
+    <button class="tab" data-tab="lineage">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="4" cy="12" r="2.2"/><circle cx="12" cy="6" r="2.2"/><circle cx="12" cy="18" r="2.2"/><circle cx="20" cy="12" r="2.2"/><path d="M6 12h2m4-4.5L18 11m-6 5.5L18 13M14 6h0M8 12h0"/></svg>
+      Lineage
+    </button>
+    <button class="tab" data-tab="validation">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+      File validation
+    </button>
+    <button class="tab" data-tab="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 106 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+      History &amp; audit
+    </button>
+  </nav>
+
+  <main class="main">
+
+    <!-- ================= SETUP TAB ================= -->
+    <section class="tab-panel" id="panel-setup">
+
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>1 · Pipeline stages</h3><p>Define the stages your trade data passes through, from source capture to the final submission file. Upload one file per stage.</p></div>
+        </div>
+        <div class="panel-body">
+          <div class="stage-strip" id="stageStrip"></div>
+          <div class="section-note"><b>Tip —</b> the last stage is always treated as the <b>output / submission file</b> and is the one validated against your schema &amp; format spec below.</div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-head">
+            <div><h3>2 · Field mapping &amp; comparison rules</h3><p>Map each stage's column to a canonical field, mark the key, and set how values should be compared.</p></div>
+            <div class="panel-actions"><button class="btn btn-sm" id="btnAutoMap">Auto‑map from headers</button><button class="btn btn-sm" id="btnAddField">+ Field</button></div>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap"><table class="dt editable" id="mappingTable"></table></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div><h3>3 · Output schema &amp; format spec</h3><p>The surveillance system's file specification — column order, types, and file‑format rules.</p></div>
+            <div class="panel-actions"><button class="btn btn-sm" id="btnLoadSpecFromFile">Load from output file</button><button class="btn btn-sm" id="btnAddSpecRow">+ Column</button></div>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap"><table class="dt editable" id="specTable"></table></div>
+            <hr class="sep">
+            <div class="inline-fields">
+              <label class="field"><span class="lbl">Delimiter</span>
+                <select id="specDelimiter"><option value=",">Comma ( , )</option><option value=";">Semicolon ( ; )</option><option value="\t">Tab</option><option value="|">Pipe ( | )</option></select>
+              </label>
+              <label class="field"><span class="lbl">Line ending</span>
+                <select id="specLineEnding"><option value="LF">LF (\n)</option><option value="CRLF">CRLF (\r\n)</option><option value="ANY">Either</option></select>
+              </label>
+              <label class="field"><span class="lbl">Quote character</span>
+                <select id="specQuote"><option value="&quot;">Double quote ( " )</option><option value="'">Single quote ( ' )</option></select>
+              </label>
+            </div>
+            <div class="checkbox-row"><input type="checkbox" id="specHeaderRequired" checked><label for="specHeaderRequired">Header row required</label></div>
+            <div class="checkbox-row" style="margin-top:6px"><input type="checkbox" id="specUtf8" checked><label for="specUtf8">Require valid UTF‑8 encoding</label></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-head"><div><h3>4 · Thresholds &amp; gatekeeping</h3><p>Determines whether a run passes, warns, or blocks file delivery.</p></div></div>
+          <div class="panel-body">
+            <label class="field"><span class="lbl">Missing / dropped record threshold</span><span class="hint">Alert if more than this many keys are missing between any two stages (0 = any missing record alerts)</span>
+              <input type="number" id="thMissing" value="0" min="0">
+            </label>
+            <div class="inline-fields">
+              <label class="field"><span class="lbl">Mismatch rate — warning</span><span class="hint">% of compared fields</span><input type="number" id="thWarnPct" value="0.1" step="0.01" min="0"></label>
+              <label class="field"><span class="lbl">Mismatch rate — block</span><span class="hint">% of compared fields</span><input type="number" id="thBlockPct" value="1" step="0.01" min="0"></label>
+            </div>
+            <div class="checkbox-row"><input type="checkbox" id="autoBlock" checked><label for="autoBlock">Auto‑block file delivery when a critical check fails</label></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><div><h3>5 · Alerting &amp; external checks</h3><p>Optional — network calls made directly from your browser.</p></div></div>
+          <div class="panel-body">
+            <label class="field"><span class="lbl">Webhook URL (Slack / Teams incoming webhook)</span><span class="hint">A JSON alert is POSTed here when a run is Warning or Block. CORS/network restrictions may block this from a browser context.</span>
+              <input type="url" id="webhookUrl" placeholder="https://hooks.slack.com/services/…">
+            </label>
+            <label class="field"><span class="lbl">Alert email (mailto fallback)</span>
+              <input type="email" id="alertEmail" placeholder="surveillance-ops@yourfirm.com">
+            </label>
+            <label class="field"><span class="lbl">External schema validator endpoint (optional)</span><span class="hint">If your surveillance system exposes a test/dry‑run validation endpoint, point to it here — its rejection reasons will be merged into the dry‑run report.</span>
+              <input type="url" id="externalValidatorUrl" placeholder="https://your-system/api/validate">
+            </label>
+            <label class="field"><span class="lbl">Config version label</span>
+              <input type="text" id="configVersion" value="v1.0" class="mono">
+            </label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DASHBOARD TAB ================= -->
+    <section class="tab-panel hidden" id="panel-dashboard">
+      <div id="dashboardEmpty" class="empty">
+        <div class="empty-badge">No reconciliation run yet</div>
+        <h2>Configure your stages and run a reconciliation to see results here.</h2>
+        <p>Head to the Setup tab, upload a file for each stage, then click <b>Run reconciliation</b> — or load the sample dataset to explore the tool first.</p>
+        <button class="btn btn-primary" id="btnSampleFromDashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>
+          Load sample dataset
+        </button>
+      </div>
+      <div id="dashboardContent" class="hidden">
+        <div id="statusBanner"></div>
+        <div class="kpi-grid" id="kpiGrid"></div>
+        <div class="grid2">
+          <div class="panel">
+            <div class="panel-head"><div><h3>Exceptions by type</h3></div></div>
+            <div class="panel-body" id="byTypeChart"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><div><h3>Exceptions by stage transition</h3></div></div>
+            <div class="panel-body" id="byStageChart"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div><h3>Approval / gatekeeping</h3><p>Recommended action is based on your configured thresholds. Every decision is logged to the audit trail.</p></div>
+            <div id="stampHost"></div>
+          </div>
+          <div class="panel-body" id="approvalBody"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h3>Run console</h3><p>Step‑by‑step log from the last run</p></div></div>
+          <div class="panel-body"><div class="run-console" id="runConsole"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= EXCEPTIONS TAB ================= -->
+    <section class="tab-panel hidden" id="panel-exceptions">
+      <div class="panel">
+        <div class="filterbar">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="excSearch" placeholder="Search key, field, value…">
+          </div>
+          <div class="msel" id="mselExcType"></div>
+          <div class="msel" id="mselExcStage"></div>
+          <div class="msel" id="mselExcSeverity"></div>
+          <span class="filter-clear" id="excClear" style="font-size:11.5px;color:var(--text-faint);cursor:pointer;text-decoration:underline;">Clear filters</span>
+          <span style="flex:1"></span>
+          <button class="btn btn-sm" id="btnExpExcExcel">Export Excel</button>
+          <button class="btn btn-sm" id="btnExpExcCsv">Export CSV</button>
+        </div>
+        <div class="table-wrap"><table class="dt" id="excTable"></table></div>
+        <div class="table-footer">
+          <span class="info" id="excInfo">0 rows</span>
+          <div class="pager" id="excPager"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= LINEAGE TAB ================= -->
+    <section class="tab-panel hidden" id="panel-lineage">
+      <div class="panel">
+        <div class="panel-head"><div><h3>Stage flow</h3><p>Record counts flowing between stages — width represents matched volume, callouts show drops and additions.</p></div></div>
+        <div class="panel-body"><div id="pipelineHost"></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div><h3>Record trace</h3><p>Follow a single record's journey across every stage, field by field.</p></div></div>
+        <div class="panel-body">
+          <div class="trace-search">
+            <input type="text" id="traceKeyInput" placeholder="Enter a key value (e.g. trade ID)…" list="traceKeyList" style="max-width:320px">
+            <datalist id="traceKeyList"></datalist>
+            <button class="btn btn-sm btn-primary" id="btnTrace">Trace</button>
+          </div>
+          <div id="traceHost"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VALIDATION TAB ================= -->
+    <section class="tab-panel hidden" id="panel-validation">
+      <div class="grid2">
+        <div class="panel">
+          <div class="panel-head"><div><h3>File integrity — checksums</h3><p>SHA‑256 of every uploaded stage file</p></div></div>
+          <div class="panel-body"><div class="table-wrap"><table class="dt" id="checksumTable"></table></div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><h3>Format &amp; encoding checks</h3><p>Output file vs. configured spec</p></div></div>
+          <div class="panel-body"><div class="table-wrap"><table class="dt" id="formatTable"></table></div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div><h3>Schema validation — column names, order &amp; types</h3></div></div>
+        <div class="panel-body"><div class="table-wrap"><table class="dt" id="schemaTable"></table></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Pre‑submission dry run</h3><p>Row‑level validation against the output schema spec, reconciled back to source keys</p></div>
+        </div>
+        <div class="panel-body"><div class="table-wrap"><table class="dt" id="dryRunTable"></table></div></div>
+      </div>
+    </section>
+
+    <!-- ================= HISTORY TAB ================= -->
+    <section class="tab-panel hidden" id="panel-history">
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Run history</h3><p>Every run this session, plus any archives you import. Select two to compare.</p></div>
+          <div class="panel-actions">
+            <button class="btn btn-sm" id="btnImportRun">Import run archive</button>
+            <button class="btn btn-sm btn-primary" id="btnCompareRuns" disabled>Compare selected</button>
+          </div>
+        </div>
+        <div class="panel-body" id="historyList"></div>
+      </div>
+      <div class="panel hidden" id="comparePanel">
+        <div class="panel-head"><div><h3>Run comparison</h3></div></div>
+        <div class="panel-body" id="compareBody"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div><h3>Audit trail</h3><p>Immutable within this session — export for permanent storage.</p></div>
+          <div class="panel-actions"><button class="btn btn-sm" id="btnExpAudit">Export CSV</button></div>
+        </div>
+        <div class="panel-body"><div class="table-wrap"><table class="dt" id="auditTable"></table></div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <p class="footer-note">Runs entirely client‑side — files are parsed in your browser and never uploaded, except optional webhook/validator calls you explicitly configure.</p>
+</div>
+
+<div class="modal-overlay" id="reasonModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="reasonModalTitle">Confirm decision</h3><button class="modal-close" id="reasonModalClose"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal-body">
+      <label class="field"><span class="lbl">Your name</span><input type="text" id="reasonActor" placeholder="e.g. J. Smith"></label>
+      <label class="field"><span class="lbl">Reason / comments</span><textarea id="reasonText" placeholder="Explain the decision for the audit trail…"></textarea></label>
+      <button class="btn btn-primary" id="reasonConfirm" style="width:100%;justify-content:center">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================================================
+   STATE
+============================================================ */
+const State = {
+  stages: [],          // [{id,name,file:{name,size,arrayBuffer,text,ext},parsed:{columns,rows,delimiter,lineEnding,encodingOk,bom,parseErrors,checksum},}]
+  mapping: [],          // [{canonical,key:bool, cols:{stageId:colName}, rule:{type,tolerance,dateFormat}}]
+  spec: [],             // [{order,name,dataType,required,pattern,enumValues,maxLength}]
+  fmtSpec: { delimiter:',', lineEnding:'LF', quote:'"', headerRequired:true, requireUtf8:true },
+  thresholds: { missing:0, warnPct:0.1, blockPct:1, autoBlock:true },
+  alerting: { webhookUrl:'', email:'', externalValidatorUrl:'', configVersion:'v1.0' },
+  runs: [],              // run history (in-memory, this session) + imported archives
+  currentRun: null,
+  activeTab: 'setup',
+  excFilters: { search:'', type:new Set(), stage:new Set(), severity:new Set() },
+  excPage: 1, excPageSize: 25,
+  compareSel: new Set(),
+  reasonModalCtx: null
+};
+const DATA_TYPES = ['string','integer','decimal','date','boolean','enum'];
+let stageFilePending = null; // stage id awaiting file browse
+
+/* ============================================================
+   UTILITIES
+============================================================ */
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtNum(n){ return (n||0).toLocaleString(); }
+function fmtPct(n){ return (Math.round((n||0)*100)/100).toFixed(2)+'%'; }
+function nowIso(){ return new Date().toISOString(); }
+function fmtTime(iso){ const d=new Date(iso); return d.toLocaleString(); }
+function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+function toast(msg, kind){
+  const host=document.getElementById('toastHost');
+  const el=document.createElement('div');
+  el.className='toast'+(kind==='err'?' err':kind==='warn'?' warn':'');
+  el.textContent=msg;
+  host.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3600);
+}
+function downloadBlob(blob, filename){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+function downloadText(text, filename, mime){ downloadBlob(new Blob([text],{type:mime||'text/plain'}), filename); }
+async function sha256Hex(buffer){
+  try{
+    const hash = await crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+  }catch(err){ return null; }
+}
+function normalizeName(s){ return (s||'').toString().toLowerCase().replace(/[^a-z0-9]/g,''); }
+function csvEscape(v){ v=(v===undefined||v===null)?'':String(v); if(/[",\n]/.test(v)) return '"'+v.replace(/"/g,'""')+'"'; return v; }
+
+/* ============================================================
+   STAGES
+============================================================ */
+function addStage(name){
+  if(State.stages.length>=7){ toast('Maximum 7 stages.', 'warn'); return; }
+  State.stages.push({ id:uid(), name: name || `Stage ${State.stages.length+1}`, file:null, parsed:null });
+  renderStageStrip();
+  syncMappingStageColumns();
+}
+function removeStage(id){
+  if(State.stages.length<=2){ toast('At least two stages are required (source + output).', 'warn'); return; }
+  State.stages = State.stages.filter(s=>s.id!==id);
+  State.mapping.forEach(m=> delete m.cols[id]);
+  renderStageStrip();
+  syncMappingStageColumns();
+  renderMappingTable();
+}
+function renameStage(id, name){
+  const s=State.stages.find(s=>s.id===id); if(s) s.name=name||s.name;
+}
+
+async function attachFileToStage(stageId, file){
+  const stage = State.stages.find(s=>s.id===stageId);
+  if(!stage) return;
+  try{
+    const buf = await file.arrayBuffer();
+    const parsed = await parseStageFile(file, buf);
+    stage.file = { name:file.name, size:file.size };
+    stage.parsed = parsed;
+    toast(`Parsed "${file.name}" — ${fmtNum(parsed.rows.length)} rows, ${parsed.columns.length} columns.`);
+    renderStageStrip();
+    syncMappingStageColumns();
+  }catch(err){
+    console.error(err);
+    toast(`Could not parse "${file.name}": ${err.message}`, 'err');
+  }
+}
+
+/* ============================================================
+   FILE PARSING ENGINE
+============================================================ */
+async function parseStageFile(file, arrayBuffer){
+  const ext = (file.name.split('.').pop()||'').toLowerCase();
+  const checksum = await sha256Hex(arrayBuffer);
+
+  if(ext==='xlsx' || ext==='xls'){
+    const wb = XLSX.read(new Uint8Array(arrayBuffer), {type:'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const aoa = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:false});
+    const columns = (aoa[0]||[]).map(c=>String(c).trim());
+    const rows = aoa.slice(1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r=>{
+      const o={}; columns.forEach((c,i)=>o[c]=r[i]!==undefined? String(r[i]).trim() : ''); return o;
+    });
+    return { ext, columns, rows, delimiter:null, lineEnding:null, encodingOk:true, bom:false,
+      parseErrors:[], checksum, fileSize:arrayBuffer.byteLength, rawTextAvailable:false };
+  }
+
+  // CSV / TXT path
+  let text, encodingOk=true, bom=false;
+  const bytes = new Uint8Array(arrayBuffer);
+  bom = bytes.length>=3 && bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF;
+  try{
+    text = new TextDecoder('utf-8', {fatal:true}).decode(arrayBuffer);
+  }catch(err){
+    encodingOk = false;
+    text = new TextDecoder('utf-8', {fatal:false}).decode(arrayBuffer);
+  }
+  const crlfCount = (text.match(/\r\n/g)||[]).length;
+  const lfOnlyCount = (text.match(/(?<!\r)\n/g)||[]).length - crlfCount + crlfCount; // total \n
+  const totalLf = (text.match(/\n/g)||[]).length;
+  const lineEnding = crlfCount>0 && crlfCount===totalLf ? 'CRLF' : (crlfCount===0 ? 'LF' : 'MIXED');
+
+  const parseRes = Papa.parse(text, { header:true, skipEmptyLines:true, dynamicTyping:false });
+  const columns = parseRes.meta.fields || [];
+  const rows = (parseRes.data||[]).map(r=>{ const o={}; columns.forEach(c=>o[c]=(r[c]===undefined||r[c]===null)?'':String(r[c]).trim()); return o; });
+
+  return {
+    ext, columns, rows,
+    delimiter: parseRes.meta.delimiter,
+    lineEnding, encodingOk, bom,
+    parseErrors: (parseRes.errors||[]).slice(0,50),
+    checksum, fileSize:arrayBuffer.byteLength, rawText:text, rawTextAvailable:true
+  };
+}
+
+/* ============================================================
+   FIELD MAPPING
+============================================================ */
+function autoMapFields(){
+  if(!State.stages.some(s=>s.parsed)){ toast('Upload at least one stage file first.', 'warn'); return; }
+  const canonicalIndex = new Map(); // normalized -> canonical entry
+  State.mapping = [];
+  State.stages.forEach(stage=>{
+    if(!stage.parsed) return;
+    stage.parsed.columns.forEach(col=>{
+      const norm = normalizeName(col);
+      let entry = canonicalIndex.get(norm);
+      if(!entry){
+        entry = { canonical: col, key:false, cols:{}, rule:{type:'exact-ci', tolerance:0, dateFormat:''} };
+        canonicalIndex.set(norm, entry);
+        State.mapping.push(entry);
+      }
+      entry.cols[stage.id] = col;
+    });
+  });
+  // guess key field: contains "id" and present in every stage that has a file
+  const filesCount = State.stages.filter(s=>s.parsed).length;
+  let guessed = State.mapping.find(m=> Object.keys(m.cols).length===filesCount && /id$/i.test(m.canonical));
+  if(!guessed) guessed = State.mapping.find(m=> Object.keys(m.cols).length===filesCount);
+  State.mapping.forEach(m=>m.key=false);
+  if(guessed) guessed.key = true;
+  renderMappingTable();
+  toast('Auto‑mapped fields from headers — review and adjust as needed.');
+}
+
+function syncMappingStageColumns(){
+  // no-op placeholder: mapping table re-render pulls live stage list each time
+  renderMappingTable();
+}
+
+function addMappingField(){
+  State.mapping.push({ canonical:'NewField', key:false, cols:{}, rule:{type:'exact-ci', tolerance:0, dateFormat:''} });
+  renderMappingTable();
+}
+function removeMappingField(idx){ State.mapping.splice(idx,1); renderMappingTable(); }
+function getKeyField(){ return State.mapping.find(m=>m.key); }
+
+function renderMappingTable(){
+  const table = document.getElementById('mappingTable');
+  const stages = State.stages;
+  table.innerHTML = `
+    <thead><tr>
+      <th>Key</th><th>Canonical field</th>
+      ${stages.map(s=>`<th>${esc(s.name)}</th>`).join('')}
+      <th>Compare rule</th><th>Tolerance</th><th></th>
+    </tr></thead>
+    <tbody>
+      ${State.mapping.map((m,idx)=>`
+        <tr data-idx="${idx}">
+          <td style="text-align:center"><input type="radio" name="keyfield" ${m.key?'checked':''} data-act="key" data-idx="${idx}"></td>
+          <td><input type="text" value="${esc(m.canonical)}" data-act="name" data-idx="${idx}" class="mono"></td>
+          ${stages.map(s=>`
+            <td>
+              <select data-act="col" data-idx="${idx}" data-stage="${s.id}">
+                <option value="">— not present —</option>
+                ${(s.parsed?s.parsed.columns:[]).map(c=>`<option value="${esc(c)}" ${m.cols[s.id]===c?'selected':''}>${esc(c)}</option>`).join('')}
+              </select>
+            </td>`).join('')}
+          <td>
+            <select data-act="rule" data-idx="${idx}">
+              <option value="exact" ${m.rule.type==='exact'?'selected':''}>Exact match</option>
+              <option value="exact-ci" ${m.rule.type==='exact-ci'?'selected':''}>Exact (trim, case‑insensitive)</option>
+              <option value="numeric" ${m.rule.type==='numeric'?'selected':''}>Numeric (tolerance)</option>
+              <option value="date" ${m.rule.type==='date'?'selected':''}>Date (ignore time)</option>
+            </select>
+          </td>
+          <td><input type="number" step="0.0001" min="0" style="width:80px" value="${esc(m.rule.tolerance||0)}" data-act="tolerance" data-idx="${idx}" ${m.rule.type!=='numeric'?'disabled':''} title="Only used for numeric rule"></td>
+          <td><button class="rm-row" data-act="remove" data-idx="${idx}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></td>
+        </tr>`).join('')}
+    </tbody>`;
+
+  table.querySelectorAll('[data-act]').forEach(el=>{
+    el.addEventListener(el.tagName==='INPUT' && (el.type==='text'||el.type==='number') ? 'input' : 'change', (e)=>{
+      const idx = Number(el.dataset.idx);
+      const m = State.mapping[idx];
+      const act = el.dataset.act;
+      if(act==='key'){ State.mapping.forEach(mm=>mm.key=false); m.key=true; }
+      else if(act==='name'){ m.canonical = el.value; }
+      else if(act==='col'){ const stageId=el.dataset.stage; if(el.value) m.cols[stageId]=el.value; else delete m.cols[stageId]; }
+      else if(act==='rule'){ m.rule.type = el.value; renderMappingTable(); }
+      else if(act==='tolerance'){ m.rule.tolerance = Number(el.value)||0; }
+      else if(act==='remove'){ removeMappingField(idx); }
+    });
+  });
+}
+
+/* ============================================================
+   OUTPUT SCHEMA SPEC
+============================================================ */
+function addSpecRow(prefill){
+  State.spec.push(Object.assign({ order: State.spec.length+1, name:'column_name', dataType:'string', required:true, pattern:'', enumValues:'', maxLength:'' }, prefill||{}));
+  renderSpecTable();
+}
+function removeSpecRow(idx){ State.spec.splice(idx,1); State.spec.forEach((r,i)=>r.order=i+1); renderSpecTable(); }
+function loadSpecFromOutputFile(){
+  const outStage = State.stages[State.stages.length-1];
+  if(!outStage || !outStage.parsed){ toast('Upload the output stage file first.', 'warn'); return; }
+  State.spec = outStage.parsed.columns.map((c,i)=>({ order:i+1, name:c, dataType:'string', required:true, pattern:'', enumValues:'', maxLength:'' }));
+  renderSpecTable();
+  toast(`Loaded ${State.spec.length} columns from output file — set data types as needed.`);
+}
+function renderSpecTable(){
+  const table = document.getElementById('specTable');
+  table.innerHTML = `
+    <thead><tr><th>#</th><th>Column name</th><th>Type</th><th>Req.</th><th>Pattern (regex)</th><th>Enum values (comma)</th><th>Max len</th><th></th></tr></thead>
+    <tbody>
+      ${State.spec.map((r,idx)=>`
+        <tr>
+          <td class="mono">${r.order}</td>
+          <td><input type="text" value="${esc(r.name)}" data-s="name" data-idx="${idx}" class="mono"></td>
+          <td><select data-s="dataType" data-idx="${idx}">${DATA_TYPES.map(t=>`<option value="${t}" ${r.dataType===t?'selected':''}>${t}</option>`).join('')}</select></td>
+          <td style="text-align:center"><input type="checkbox" ${r.required?'checked':''} data-s="required" data-idx="${idx}"></td>
+          <td><input type="text" value="${esc(r.pattern)}" data-s="pattern" data-idx="${idx}" class="mono" placeholder="optional"></td>
+          <td><input type="text" value="${esc(r.enumValues)}" data-s="enumValues" data-idx="${idx}" placeholder="e.g. BUY,SELL"></td>
+          <td><input type="number" value="${esc(r.maxLength)}" data-s="maxLength" data-idx="${idx}" style="width:70px"></td>
+          <td><button class="rm-row" data-s="remove" data-idx="${idx}"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></td>
+        </tr>`).join('')}
+    </tbody>`;
+  table.querySelectorAll('[data-s]').forEach(el=>{
+    const evt = (el.tagName==='INPUT' && (el.type==='text'||el.type==='number')) ? 'input' : 'change';
+    el.addEventListener(evt, ()=>{
+      const idx=Number(el.dataset.idx), key=el.dataset.s;
+      if(key==='remove'){ removeSpecRow(idx); return; }
+      const row = State.spec[idx];
+      if(key==='required') row.required = el.checked;
+      else row[key] = el.value;
+    });
+  });
+}
+
+/* ============================================================
+   SAMPLE DATA
+============================================================ */
+function loadSampleDataset(){
+  State.stages = [
+    { id:uid(), name:'Source (OMS)', file:null, parsed:null },
+    { id:uid(), name:'Enriched', file:null, parsed:null },
+    { id:uid(), name:'Output (Submission)', file:null, parsed:null }
+  ];
+  const [src, enr, out] = State.stages;
+
+  const N = 60;
+  const sides=['BUY','SELL'], venues=['XLON','XNYS','XPAR'];
+  const srcRows=[], enrRows=[], outRows=[];
+  for(let i=1;i<=N;i++){
+    const id = 'TRD'+String(100000+i);
+    const qty = 100+i*7;
+    const price = (10 + (i%15)*1.37).toFixed(2);
+    const side = sides[i%2];
+    const venue = venues[i%3];
+    const trader = 'TR'+(1000+(i%9));
+    const date = `2026-07-${String(1+(i%9)).padStart(2,'0')}`;
+    srcRows.push({TradeID:id, Quantity:String(qty), Price:price, Side:side, Venue:venue, TraderID:trader, TradeDate:date});
+
+    let eQty=String(qty), ePrice=price;
+    if(i===7) ePrice=(Number(price)+5).toFixed(2); // intentional mismatch introduced at enrichment
+    if(i===22) continue; // dropped at enrichment stage
+    enrRows.push({TradeID:id, Quantity:eQty, Price:ePrice, Side:side, Venue:venue, TraderID:trader, TradeDate:date, Notional:(Number(eQty)*Number(ePrice)).toFixed(2)});
+
+    if(i===22) continue;
+    if(i===41) continue; // dropped at output stage
+    let oPrice = ePrice;
+    if(i===7) oPrice = price; // output "corrects" back — will show as mismatch vs enriched, matches source
+    let oSide = side;
+    if(i===15) oSide=''; // missing required field -> dry run rejection
+    let oTrader = trader;
+    if(i===33) oTrader = 'BADTRADER!!'; // pattern violation
+    outRows.push({trade_id:id, qty:eQty, price:oPrice, side:oSide, venue, trader_id:oTrader, trade_date:date, notional:(Number(eQty)*Number(oPrice)).toFixed(2)});
+  }
+  // extra unexpected record appearing only in output
+  outRows.push({trade_id:'TRD199999', qty:'500', price:'42.10', side:'BUY', venue:'XLON', trader_id:'TR1002', trade_date:'2026-07-09', notional:'21050.00'});
+
+  function toParsed(rows){
+    const columns = Object.keys(rows[0]);
+    return { ext:'csv', columns, rows, delimiter:',', lineEnding:'LF', encodingOk:true, bom:false, parseErrors:[], checksum:'(sample — no checksum)', fileSize:0, rawTextAvailable:false };
+  }
+  src.parsed = toParsed(srcRows); src.file={name:'source_trades.csv', size:0};
+  enr.parsed = toParsed(enrRows); enr.file={name:'enriched_trades.csv', size:0};
+  out.parsed = toParsed(outRows); out.file={name:'submission_output.csv', size:0};
+
+  State.mapping = [
+    { canonical:'TradeID', key:true, cols:{[src.id]:'TradeID',[enr.id]:'TradeID',[out.id]:'trade_id'}, rule:{type:'exact'} },
+    { canonical:'Quantity', key:false, cols:{[src.id]:'Quantity',[enr.id]:'Quantity',[out.id]:'qty'}, rule:{type:'numeric', tolerance:0} },
+    { canonical:'Price', key:false, cols:{[src.id]:'Price',[enr.id]:'Price',[out.id]:'price'}, rule:{type:'numeric', tolerance:0.001} },
+    { canonical:'Side', key:false, cols:{[src.id]:'Side',[enr.id]:'Side',[out.id]:'side'}, rule:{type:'exact-ci'} },
+    { canonical:'Venue', key:false, cols:{[src.id]:'Venue',[enr.id]:'Venue',[out.id]:'venue'}, rule:{type:'exact-ci'} },
+    { canonical:'TraderID', key:false, cols:{[src.id]:'TraderID',[enr.id]:'TraderID',[out.id]:'trader_id'}, rule:{type:'exact'} },
+    { canonical:'TradeDate', key:false, cols:{[src.id]:'TradeDate',[enr.id]:'TradeDate',[out.id]:'trade_date'}, rule:{type:'date'} },
+  ];
+
+  State.spec = [
+    { order:1, name:'trade_id', dataType:'string', required:true, pattern:'^TRD\\d+$', enumValues:'', maxLength:'' },
+    { order:2, name:'qty', dataType:'integer', required:true, pattern:'', enumValues:'', maxLength:'' },
+    { order:3, name:'price', dataType:'decimal', required:true, pattern:'', enumValues:'', maxLength:'' },
+    { order:4, name:'side', dataType:'enum', required:true, pattern:'', enumValues:'BUY,SELL', maxLength:'' },
+    { order:5, name:'venue', dataType:'string', required:true, pattern:'', enumValues:'', maxLength:10 },
+    { order:6, name:'trader_id', dataType:'string', required:true, pattern:'^TR\\d{4}$', enumValues:'', maxLength:'' },
+    { order:7, name:'trade_date', dataType:'date', required:true, pattern:'', enumValues:'', maxLength:'' },
+    { order:8, name:'notional', dataType:'decimal', required:false, pattern:'', enumValues:'', maxLength:'' },
+  ];
+
+  document.getElementById('thMissing').value=0;
+  document.getElementById('thWarnPct').value=0.1;
+  document.getElementById('thBlockPct').value=1;
+
+  renderStageStrip(); renderMappingTable(); renderSpecTable();
+  toast('Sample dataset loaded — go to Setup to review, or click Run reconciliation.');
+}
+
+/* ============================================================
+   RUN ENGINE
+============================================================ */
+function readThresholdsFromUI(){
+  State.thresholds.missing = Number(document.getElementById('thMissing').value)||0;
+  State.thresholds.warnPct = Number(document.getElementById('thWarnPct').value)||0;
+  State.thresholds.blockPct = Number(document.getElementById('thBlockPct').value)||0;
+  State.thresholds.autoBlock = document.getElementById('autoBlock').checked;
+  State.fmtSpec.delimiter = document.getElementById('specDelimiter').value === '\\t' ? '\t' : document.getElementById('specDelimiter').value;
+  State.fmtSpec.lineEnding = document.getElementById('specLineEnding').value;
+  State.fmtSpec.quote = document.getElementById('specQuote').value;
+  State.fmtSpec.headerRequired = document.getElementById('specHeaderRequired').checked;
+  State.fmtSpec.requireUtf8 = document.getElementById('specUtf8').checked;
+  State.alerting.webhookUrl = document.getElementById('webhookUrl').value.trim();
+  State.alerting.email = document.getElementById('alertEmail').value.trim();
+  State.alerting.externalValidatorUrl = document.getElementById('externalValidatorUrl').value.trim();
+  State.alerting.configVersion = document.getElementById('configVersion').value.trim() || 'v1.0';
+}
+
+function validateValueAgainstSpec(value, specRow){
+  const issues = [];
+  const v = (value===undefined||value===null) ? '' : String(value).trim();
+  if(specRow.required && v===''){ issues.push('Required field is missing/empty'); return issues; }
+  if(v===''){ return issues; }
+  switch(specRow.dataType){
+    case 'integer': if(!/^-?\d+$/.test(v)) issues.push(`Not a valid integer ("${v}")`); break;
+    case 'decimal': if(!/^-?\d+(\.\d+)?$/.test(v)) issues.push(`Not a valid decimal ("${v}")`); break;
+    case 'boolean': if(!['true','false','1','0','yes','no'].includes(v.toLowerCase())) issues.push(`Not a valid boolean ("${v}")`); break;
+    case 'date': if(!/^\d{4}-\d{2}-\d{2}([ T]\d{2}:\d{2}(:\d{2})?)?$/.test(v) && isNaN(Date.parse(v))) issues.push(`Not a valid date ("${v}")`); break;
+    case 'enum': {
+      const allowed = (specRow.enumValues||'').split(',').map(s=>s.trim()).filter(Boolean);
+      if(allowed.length && !allowed.some(a=>a.toLowerCase()===v.toLowerCase())) issues.push(`Value "${v}" not in allowed set [${allowed.join(', ')}]`);
+      break;
+    }
+    default: break;
+  }
+  if(specRow.pattern){
+    try{ const re=new RegExp(specRow.pattern); if(!re.test(v)) issues.push(`Does not match pattern /${specRow.pattern}/`); }catch(e){/* ignore bad regex */}
+  }
+  if(specRow.maxLength && v.length>Number(specRow.maxLength)) issues.push(`Exceeds max length ${specRow.maxLength} (got ${v.length})`);
+  return issues;
+}
+
+function compareValues(a,b,rule){
+  const av=(a===undefined||a===null)?'':String(a).trim();
+  const bv=(b===undefined||b===null)?'':String(b).trim();
+  switch(rule.type){
+    case 'exact': return av===bv;
+    case 'exact-ci': return av.toLowerCase()===bv.toLowerCase();
+    case 'numeric': {
+      const an=parseFloat(av), bn=parseFloat(bv);
+      if(isNaN(an)||isNaN(bn)) return av===bv;
+      return Math.abs(an-bn) <= (Number(rule.tolerance)||0)+1e-9;
+    }
+    case 'date': {
+      const ad=Date.parse(av), bd=Date.parse(bv);
+      if(isNaN(ad)||isNaN(bd)) return av===bv;
+      return new Date(ad).toDateString()===new Date(bd).toDateString();
+    }
+    default: return av===bv;
+  }
+}
+
+async function runReconciliation(){
+  readThresholdsFromUI();
+  const log = [];
+  const pushLog = (msg, level)=> log.push({ts:nowIso(), msg, level:level||'info'});
+
+  const stagesWithFiles = State.stages.filter(s=>s.parsed);
+  if(stagesWithFiles.length < State.stages.length){
+    toast('Every stage needs an uploaded file before running.', 'err');
+    return;
+  }
+  const keyField = getKeyField();
+  if(!keyField){ toast('Mark one mapped field as the Key (e.g. Trade ID) before running.', 'err'); return; }
+  if(!State.spec.length){ toast('Add at least one column to the output schema spec before running.', 'err'); return; }
+
+  pushLog(`Starting reconciliation run across ${State.stages.length} stages…`);
+  const outStage = State.stages[State.stages.length-1];
+
+  const fileMeta = State.stages.map(s=>({
+    stageId:s.id, stageName:s.name, fileName:s.file.name, size:s.file.size,
+    checksum:s.parsed.checksum, rowCount:s.parsed.rows.length, columnCount:s.parsed.columns.length
+  }));
+  pushLog(`Computed checksums for ${fileMeta.length} files.`, 'ok');
+
+  const fmt = State.fmtSpec;
+  const op = outStage.parsed;
+  const formatChecks = [];
+  if(op.rawTextAvailable){
+    formatChecks.push({ check:'Encoding (UTF‑8)', expected:'Valid UTF‑8', actual: op.encodingOk?'Valid UTF‑8'+(op.bom?' (with BOM)':''):'Invalid byte sequences detected', pass: !fmt.requireUtf8 || op.encodingOk });
+    const delimName = {',':'Comma ( , )',';':'Semicolon ( ; )','\t':'Tab','|':'Pipe ( | )'}[fmt.delimiter]||fmt.delimiter;
+    const detDelimName = {',':'Comma ( , )',';':'Semicolon ( ; )','\t':'Tab','|':'Pipe ( | )'}[op.delimiter]||op.delimiter;
+    formatChecks.push({ check:'Delimiter', expected:delimName, actual:detDelimName, pass: op.delimiter===fmt.delimiter });
+    formatChecks.push({ check:'Line endings', expected:fmt.lineEnding, actual:op.lineEnding, pass: fmt.lineEnding==='ANY' || op.lineEnding===fmt.lineEnding });
+    formatChecks.push({ check:'Quoting', expected:`Well‑formed (${fmt.quote})`, actual: op.parseErrors.length? `${op.parseErrors.length} parse warning(s)` : 'No quoting errors detected', pass: op.parseErrors.length===0 });
+  } else {
+    formatChecks.push({ check:'File type', expected:'CSV/TXT for format checks', actual:'Excel workbook — delimiter/encoding/line‑ending checks not applicable', pass:true });
+  }
+  formatChecks.push({ check:'Header row', expected: fmt.headerRequired?'Required':'Not required', actual: op.columns.length? 'Present':'Missing', pass: !fmt.headerRequired || op.columns.length>0 });
+  const formatPass = formatChecks.every(c=>c.pass);
+  pushLog(`Format/encoding checks on output file: ${formatPass?'PASS':'FAIL'}`, formatPass?'ok':'crit');
+
+  const specNames = State.spec.slice().sort((a,b)=>a.order-b.order).map(r=>r.name);
+  const actualNames = op.columns;
+  const maxLen = Math.max(specNames.length, actualNames.length);
+  const schemaRows = [];
+  for(let i=0;i<maxLen;i++){
+    const exp = specNames[i], act = actualNames[i];
+    let status;
+    if(exp===undefined) status='extra';
+    else if(act===undefined) status='missing';
+    else if(exp===act) status='match';
+    else if(actualNames.includes(exp)) status='misplaced';
+    else status='mismatch';
+    schemaRows.push({ index:i+1, expected:exp||'—', actual:act||'—', status });
+  }
+  const schemaPass = schemaRows.every(r=>r.status==='match');
+  pushLog(`Schema column/order validation: ${schemaPass?'PASS':'FAIL'} (${schemaRows.filter(r=>r.status!=='match').length} issue(s))`, schemaPass?'ok':'crit');
+
+  const keyColOut = keyField.cols[outStage.id];
+  const dryRunRejections = [];
+  op.rows.forEach((row,ri)=>{
+    const tradeId = keyColOut ? row[keyColOut] : `row#${ri+1}`;
+    State.spec.forEach(specRow=>{
+      const issues = validateValueAgainstSpec(row[specRow.name], specRow);
+      issues.forEach(issue=> dryRunRejections.push({ key:tradeId||`row#${ri+1}`, field:specRow.name, reason:issue, ruleViolated: specRow.required && (row[specRow.name]||'')===''? 'required':'format' }));
+    });
+  });
+  const keyCounts = new Map();
+  op.rows.forEach(row=>{ const k=keyColOut?row[keyColOut]:null; if(!k) return; keyCounts.set(k,(keyCounts.get(k)||0)+1); });
+  keyCounts.forEach((cnt,k)=>{ if(cnt>1) dryRunRejections.push({ key:k, field:keyField.canonical, reason:`Duplicate key — appears ${cnt} times in output file`, ruleViolated:'uniqueness' }); });
+  pushLog(`Dry‑run schema validation: ${dryRunRejections.length} rejection reason(s) across output rows.`, dryRunRejections.length? 'warn':'ok');
+
+  let externalResult = null;
+  if(State.alerting.externalValidatorUrl){
+    pushLog(`Calling external validator endpoint…`);
+    try{
+      const resp = await fetch(State.alerting.externalValidatorUrl, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ columns: op.columns, rows: op.rows.slice(0,2000) })
+      });
+      if(resp.ok){
+        externalResult = await resp.json().catch(()=>null);
+        pushLog(`External validator responded OK.`, 'ok');
+      } else {
+        pushLog(`External validator returned HTTP ${resp.status}.`, 'warn');
+      }
+    }catch(err){
+      pushLog(`External validator call failed (network/CORS): ${err.message}`, 'warn');
+    }
+  }
+
+  const canonicalByStage = {};
+  State.stages.forEach(stage=>{
+    const map = new Map();
+    stage.parsed.rows.forEach(row=>{
+      const kcol = keyField.cols[stage.id];
+      const k = kcol ? (row[kcol]||'').trim() : '';
+      if(!k) return;
+      const canon = {};
+      State.mapping.forEach(m=>{ const c=m.cols[stage.id]; canon[m.canonical] = c ? row[c] : undefined; });
+      if(!map.has(k)) map.set(k, []);
+      map.get(k).push(canon);
+    });
+    canonicalByStage[stage.id] = map;
+  });
+
+  const transitions = [];
+  const mismatches = [];
+  for(let i=0;i<State.stages.length-1;i++){
+    const from = State.stages[i], to = State.stages[i+1];
+    const fromMap = canonicalByStage[from.id], toMap = canonicalByStage[to.id];
+    const fromKeys = new Set(fromMap.keys()), toKeys = new Set(toMap.keys());
+    const dropped = [...fromKeys].filter(k=>!toKeys.has(k));
+    const added = [...toKeys].filter(k=>!fromKeys.has(k));
+    const common = [...fromKeys].filter(k=>toKeys.has(k));
+    let fieldsCompared=0, fieldsMismatched=0;
+    common.forEach(k=>{
+      const a = fromMap.get(k)[0], b = toMap.get(k)[0];
+      State.mapping.forEach(m=>{
+        if(m.key) return;
+        if(!(m.canonical in a) || !(m.canonical in b)) return;
+        if(a[m.canonical]===undefined || b[m.canonical]===undefined) return;
+        fieldsCompared++;
+        if(!compareValues(a[m.canonical], b[m.canonical], m.rule)){
+          fieldsMismatched++;
+          mismatches.push({ key:k, fromStage:from.name, toStage:to.name, field:m.canonical, expected:a[m.canonical], actual:b[m.canonical], rule:m.rule.type });
+        }
+      });
+    });
+    transitions.push({ fromStage:from.name, toStage:to.name, fromCount:fromKeys.size, toCount:toKeys.size,
+      matched:common.length, dropped, added, fieldsCompared, fieldsMismatched });
+    pushLog(`${from.name} → ${to.name}: ${common.length} matched, ${dropped.length} dropped, ${added.length} added, ${fieldsMismatched}/${fieldsCompared} field mismatches.`, dropped.length||fieldsMismatched ? 'warn':'ok');
+  }
+
+  const totalSource = canonicalByStage[State.stages[0].id].size;
+  const totalOutput = canonicalByStage[outStage.id].size;
+  const totalCompared = transitions.reduce((s,t)=>s+t.fieldsCompared,0);
+  const totalMismatched = transitions.reduce((s,t)=>s+t.fieldsMismatched,0);
+  const totalDropped = transitions.reduce((s,t)=>s+t.dropped.length,0);
+  const totalAdded = transitions.reduce((s,t)=>s+t.added.length,0);
+  const matchRatePct = totalCompared ? 100*(totalCompared-totalMismatched)/totalCompared : 100;
+  const mismatchRatePct = totalCompared ? 100*totalMismatched/totalCompared : 0;
+  const exceptionCount = mismatches.length + dryRunRejections.length + totalDropped + totalAdded + schemaRows.filter(r=>r.status!=='match').length;
+
+  const byType = {};
+  mismatches.forEach(()=> byType['Field mismatch']=(byType['Field mismatch']||0)+1);
+  dryRunRejections.forEach(()=> byType['Dry‑run rejection']=(byType['Dry‑run rejection']||0)+1);
+  transitions.forEach(t=>{ if(t.dropped.length) byType['Missing record']=(byType['Missing record']||0)+t.dropped.length; if(t.added.length) byType['Unexpected record']=(byType['Unexpected record']||0)+t.added.length; });
+  if(!schemaPass) byType['Schema violation']=(byType['Schema violation']||0)+schemaRows.filter(r=>r.status!=='match').length;
+
+  const byStage = {};
+  transitions.forEach(t=>{ const k=`${t.fromStage} → ${t.toStage}`; byStage[k]=(t.dropped.length+t.added.length+t.fieldsMismatched); });
+
+  const kpis = { totalSource, totalOutput, matchRatePct, mismatchRatePct, mismatchCount:totalMismatched, exceptionCount, totalDropped, totalAdded, byType, byStage };
+
+  const alertReasons = [];
+  let alertLevel = 'ok';
+  if(totalDropped > State.thresholds.missing){ alertLevel='warn'; alertReasons.push(`${totalDropped} record(s) missing between stages (threshold: >${State.thresholds.missing}).`); }
+  if(mismatchRatePct > State.thresholds.warnPct){ alertLevel = (alertLevel==='ok')?'warn':alertLevel; alertReasons.push(`Mismatch rate ${fmtPct(mismatchRatePct)} exceeds warning threshold ${fmtPct(State.thresholds.warnPct)}.`); }
+  if(mismatchRatePct > State.thresholds.blockPct){ alertLevel='block'; alertReasons.push(`Mismatch rate ${fmtPct(mismatchRatePct)} exceeds BLOCK threshold ${fmtPct(State.thresholds.blockPct)}.`); }
+  if(!schemaPass){ alertLevel='block'; alertReasons.push(`Output schema does not match specification (column name/order mismatch).`); }
+  if(!formatPass){ alertLevel='block'; alertReasons.push(`Output file fails format/encoding checks.`); }
+  if(dryRunRejections.some(r=>r.ruleViolated==='required')){ alertLevel='block'; alertReasons.push(`Output file has rows missing required fields.`); }
+  pushLog(`Threshold evaluation: ${alertLevel.toUpperCase()}${alertReasons.length? ' — '+alertReasons.length+' reason(s)':''}.`, alertLevel==='ok'?'ok':alertLevel==='warn'?'warn':'crit');
+
+  const configSnapshotStr = JSON.stringify({ mapping:State.mapping, spec:State.spec, fmtSpec:State.fmtSpec, thresholds:State.thresholds, stages:State.stages.map(s=>s.name) });
+  const configHash = await sha256Hex(new TextEncoder().encode(configSnapshotStr));
+
+  const run = {
+    runId: 'RUN-'+Date.now().toString(36).toUpperCase(),
+    timestamp: nowIso(),
+    configVersion: State.alerting.configVersion,
+    configHash,
+    stageNames: State.stages.map(s=>s.name),
+    fileMeta, formatChecks, formatPass, schemaRows, schemaPass,
+    dryRunRejections, externalResult,
+    transitions, mismatches, kpis,
+    alertLevel, alertReasons,
+    approval: { status: alertLevel==='block' && State.thresholds.autoBlock ? 'blocked' : 'pending', by:'', reason: alertLevel==='block'&&State.thresholds.autoBlock?'Auto‑blocked by threshold policy':'', at: nowIso() },
+    log,
+    keyFieldName: keyField.canonical
+  };
+  run._live = { canonicalByStage, keyField };
+
+  State.runs.unshift(run);
+  State.currentRun = run;
+  pushLog(`Run ${run.runId} complete.`, 'ok');
+
+  if(alertLevel!=='ok'){ maybeSendAlerts(run); }
+  auditLog('run_completed', `Run ${run.runId} finished with status ${alertLevel.toUpperCase()}.`, 'System');
+
+  renderAllAfterRun();
+  toast(`Run ${run.runId} complete — status: ${alertLevel.toUpperCase()}.`, alertLevel==='block'?'err':alertLevel==='warn'?'warn':undefined);
+}
+
+/* ============================================================
+   ALERTING
+============================================================ */
+function buildAlertText(run){
+  return `ReconLedger alert — ${run.runId}\nStatus: ${run.alertLevel.toUpperCase()}\n`+
+    `Match rate: ${fmtPct(run.kpis.matchRatePct)} | Mismatches: ${run.kpis.mismatchCount} | Missing: ${run.kpis.totalDropped} | Exceptions: ${run.kpis.exceptionCount}\n`+
+    `Reasons:\n${run.alertReasons.map(r=>'- '+r).join('\n')}`;
+}
+async function maybeSendAlerts(run){
+  if(State.alerting.webhookUrl){
+    try{
+      await fetch(State.alerting.webhookUrl, { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ text: buildAlertText(run) }) });
+      toast('Webhook alert sent.');
+    }catch(err){
+      toast('Webhook alert failed to send (network/CORS) — use the mailto/copy fallback in Dashboard.', 'warn');
+    }
+  }
+}
+function mailtoForRun(run){
+  const subj = encodeURIComponent(`ReconLedger alert — ${run.runId} (${run.alertLevel.toUpperCase()})`);
+  const body = encodeURIComponent(buildAlertText(run));
+  return `mailto:${encodeURIComponent(State.alerting.email||'')}?subject=${subj}&body=${body}`;
+}
+
+/* ============================================================
+   AUDIT LOG
+============================================================ */
+const AuditLog = [];
+function auditLog(action, detail, actor){
+  AuditLog.unshift({ ts: nowIso(), actor: actor||'You', action, detail });
+  renderAuditTable();
+}
+
+/* ============================================================
+   APPROVAL / GATEKEEPING
+============================================================ */
+function openReasonModal(title, onConfirm){
+  State.reasonModalCtx = onConfirm;
+  document.getElementById('reasonModalTitle').textContent = title;
+  document.getElementById('reasonActor').value='';
+  document.getElementById('reasonText').value='';
+  document.getElementById('reasonModal').classList.add('open');
+}
+function closeReasonModal(){ document.getElementById('reasonModal').classList.remove('open'); State.reasonModalCtx=null; }
+
+function decideRun(status){
+  if(!State.currentRun) return;
+  const label = status==='approved'?'Approve run':status==='blocked'?'Block file delivery':'Override recommendation';
+  openReasonModal(label, ()=>{
+    const actor = document.getElementById('reasonActor').value.trim()||'Unnamed reviewer';
+    const reason = document.getElementById('reasonText').value.trim()||'(no reason provided)';
+    State.currentRun.approval = { status, by:actor, reason, at:nowIso() };
+    auditLog('approval_decision', `${status.toUpperCase()} — ${runDesc(State.currentRun)} — "${reason}"`, actor);
+    renderDashboard();
+    toast(`Run marked as ${status}.`);
+  });
+}
+function runDesc(run){ return `${run.runId} (${fmtTime(run.timestamp)})`; }
+
+/* ============================================================
+   RENDER: STAGE STRIP (setup tab)
+============================================================ */
+function renderStageStrip(){
+  const host = document.getElementById('stageStrip');
+  host.innerHTML = '';
+  State.stages.forEach((s,idx)=>{
+    const wrap = document.createElement('div');
+    const isOutput = idx===State.stages.length-1;
+    wrap.innerHTML = `
+      <div class="stage-chip ${isOutput?'is-output':''}">
+        ${State.stages.length>2 ? `<button class="sc-remove" data-rm="${s.id}"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6L6 18M6 6l12 12"/></svg></button>` : ''}
+        <div class="sc-top">
+          <input type="text" class="sc-name-input mono" data-rename="${s.id}" value="${esc(s.name)}" style="background:none;border:none;color:var(--text);font-family:var(--display);font-weight:600;font-size:13px;padding:0;width:100%">
+        </div>
+        ${isOutput?'<span class="sc-tag">Output / submission</span>':''}
+        ${s.file ? `<span class="sc-file" title="${esc(s.file.name)}">${esc(s.file.name)}</span><span style="font-size:10px;color:var(--text-faint)">${fmtNum(s.parsed.rows.length)} rows · ${s.parsed.columns.length} cols</span>` :
+          `<div class="stage-drop" data-browse="${s.id}">Click to upload file</div>`}
+        ${s.file ? `<button class="btn btn-sm" data-browse="${s.id}" style="margin-top:4px">Replace file</button>` : ''}
+      </div>`;
+    host.appendChild(wrap.firstElementChild);
+    if(idx < State.stages.length-1){
+      const arrow = document.createElement('div');
+      arrow.className='stage-arrow';
+      arrow.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`;
+      host.appendChild(arrow);
+    }
+  });
+  const addBtn = document.createElement('div');
+  addBtn.className='stage-add';
+  addBtn.id='addStageBtn';
+  addBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> Add stage`;
+  host.appendChild(addBtn);
+
+  host.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',(e)=>{ e.stopPropagation(); removeStage(b.dataset.rm); }));
+  host.querySelectorAll('[data-rename]').forEach(inp=>inp.addEventListener('input',()=>renameStage(inp.dataset.rename, inp.value)));
+  host.querySelectorAll('[data-browse]').forEach(b=>b.addEventListener('click',()=>{ stageFilePending=b.dataset.browse; document.getElementById('stageFileInput').click(); }));
+  document.getElementById('addStageBtn').addEventListener('click',()=>addStage());
+}
+
+/* ============================================================
+   RENDER: AFTER RUN (dashboard, exceptions, lineage, validation, history)
+============================================================ */
+function renderAllAfterRun(){
+  document.getElementById('lastRunPill').textContent = State.currentRun ? `${State.currentRun.runId} · ${State.currentRun.alertLevel.toUpperCase()}` : 'No run yet';
+  document.getElementById('lastRunPill').className = 'pill ' + (State.currentRun ? (State.currentRun.alertLevel==='ok'?'pill-ok':State.currentRun.alertLevel==='warn'?'pill-warn':'pill-crit') : 'pill-neutral');
+  document.getElementById('dashboardEmpty').classList.add('hidden');
+  document.getElementById('dashboardContent').classList.remove('hidden');
+  renderDashboard();
+  renderExceptionFilters();
+  State.excPage=1;
+  renderExceptions();
+  renderLineage();
+  renderValidation();
+  renderHistory();
+  renderAuditTable();
+}
+
+function badgeAlert(level){
+  if(level==='ok') return `<span class="badge badge-ok">PASS</span>`;
+  if(level==='warn') return `<span class="badge badge-warn">WARNING</span>`;
+  return `<span class="badge badge-crit">BLOCK</span>`;
+}
+
+/* ---------------- DASHBOARD ---------------- */
+function renderDashboard(){
+  const run = State.currentRun;
+  if(!run) return;
+  const k = run.kpis;
+
+  const bannerHost = document.getElementById('statusBanner');
+  const iconOk = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>`;
+  const iconWarn = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9L2.7 17a2 2 0 001.7 3h15.2a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>`;
+  const cls = run.alertLevel==='ok'?'ok':run.alertLevel==='warn'?'warn':'crit';
+  bannerHost.innerHTML = `
+    <div class="status-banner ${cls}">
+      <div class="icon">${run.alertLevel==='ok'?iconOk:iconWarn}</div>
+      <div>
+        <h4>${run.alertLevel==='ok'?'All checks passed':run.alertLevel==='warn'?'Run completed with warnings':'Run blocked — critical checks failed'}</h4>
+        <p>${run.runId} · ${fmtTime(run.timestamp)} · config ${esc(run.configVersion)}</p>
+        ${run.alertReasons.length? `<ul>${run.alertReasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>` : ''}
+      </div>
+    </div>`;
+
+  const kpis = [
+    {label:'Source records', val:k.totalSource, color:'var(--accent-2)'},
+    {label:'Output records', val:k.totalOutput, color:'var(--purple)'},
+    {label:'Match rate', val:fmtPct(k.matchRatePct), color:'var(--ok)'},
+    {label:'Mismatch rate', val:fmtPct(k.mismatchRatePct), color: k.mismatchRatePct>State.thresholds.blockPct?'var(--crit)': k.mismatchRatePct>State.thresholds.warnPct?'var(--warn)':'var(--ok)'},
+    {label:'Field mismatches', val:k.mismatchCount, color:'var(--warn)'},
+    {label:'Missing records', val:k.totalDropped, color:'var(--crit)'},
+    {label:'Unexpected records', val:k.totalAdded, color:'var(--crit)'},
+    {label:'Total exceptions', val:k.exceptionCount, color:'var(--accent)'},
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpis.map(x=>`
+    <div class="kpi-card" style="--accent-color:${x.color}">
+      <div class="kpi-val">${typeof x.val==='number'?fmtNum(x.val):x.val}</div>
+      <div class="kpi-lbl">${esc(x.label)}</div>
+    </div>`).join('');
+
+  document.getElementById('byTypeChart').innerHTML = barChart(k.byType) || emptyChartMsg();
+  document.getElementById('byStageChart').innerHTML = barChart(k.byStage) || emptyChartMsg();
+
+  document.getElementById('stampHost').innerHTML = stampHtml(run.approval.status);
+
+  const ap = run.approval;
+  document.getElementById('approvalBody').innerHTML = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <button class="btn btn-ok btn-sm" id="btnApprove">Approve run</button>
+      <button class="btn btn-danger btn-sm" id="btnBlock">Block file delivery</button>
+      <button class="btn btn-sm" id="btnOverride">Override recommendation</button>
+      <span style="flex:1"></span>
+      ${State.alerting.webhookUrl? `<button class="btn btn-sm" id="btnSendWebhook">Resend webhook alert</button>`:''}
+      ${State.alerting.email? `<a class="btn btn-sm" id="btnMailto" href="${mailtoForRun(run)}">Email alert</a>`:''}
+      <button class="btn btn-sm" id="btnCopyAlert">Copy alert text</button>
+    </div>
+    <table class="dt"><tbody>
+      <tr><td style="width:160px;color:var(--text-faint)">Current status</td><td>${badgeAlert(ap.status==='approved'?'ok':ap.status==='blocked'?'block':'warn')} <span class="mono" style="color:var(--text-faint);margin-left:6px">${ap.status}</span></td></tr>
+      <tr><td style="color:var(--text-faint)">Decided by</td><td>${esc(ap.by)||'<span style="color:var(--text-faint)">— pending —</span>'}</td></tr>
+      <tr><td style="color:var(--text-faint)">Reason</td><td>${esc(ap.reason)||'—'}</td></tr>
+      <tr><td style="color:var(--text-faint)">Timestamp</td><td>${fmtTime(ap.at)}</td></tr>
+      <tr><td style="color:var(--text-faint)">Config hash</td><td class="mono" style="font-size:11px">${esc(run.configHash||'n/a')}</td></tr>
+    </tbody></table>`;
+
+  document.getElementById('btnApprove').addEventListener('click', ()=>decideRun('approved'));
+  document.getElementById('btnBlock').addEventListener('click', ()=>decideRun('blocked'));
+  document.getElementById('btnOverride').addEventListener('click', ()=>decideRun('overridden'));
+  const wb=document.getElementById('btnSendWebhook'); if(wb) wb.addEventListener('click', ()=>maybeSendAlerts(run));
+  const cp=document.getElementById('btnCopyAlert'); if(cp) cp.addEventListener('click', ()=>{
+    navigator.clipboard.writeText(buildAlertText(run)).then(()=>toast('Alert text copied.')).catch(()=>toast('Could not copy — clipboard unavailable.', 'err'));
+  });
+
+  const consoleHost = document.getElementById('runConsole');
+  consoleHost.innerHTML = run.log.map(l=>`<div class="ln ${l.level}"><span class="t">${new Date(l.ts).toLocaleTimeString()}</span>${esc(l.msg)}</div>`).join('');
+}
+function stampHtml(status){
+  const map = { approved:'approved', blocked:'blocked', pending:'pending', overridden:'overridden' };
+  const cls = map[status]||'pending';
+  const label = status==='approved'?'Approved':status==='blocked'?'Blocked':status==='overridden'?'Overridden':'Pending review';
+  return `<span class="stamp ${cls}">${label}</span>`;
+}
+function barChart(obj){
+  const entries = Object.entries(obj||{}).sort((a,b)=>b[1]-a[1]);
+  if(!entries.length) return '';
+  const max = Math.max(...entries.map(e=>e[1]),1);
+  return entries.map(([k,v])=>`
+    <div class="barrow" style="display:flex;align-items:center;gap:10px;padding:6px 0">
+      <span style="width:170px;flex-shrink:0;font-family:var(--mono);font-size:11.5px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(k)}</span>
+      <span style="flex:1;height:9px;background:var(--surface-2);border-radius:5px;overflow:hidden"><span style="display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent),var(--accent-2));width:${(v/max*100).toFixed(1)}%"></span></span>
+      <span style="width:30px;text-align:right;font-family:var(--mono);font-size:11.5px;color:var(--text-faint)">${v}</span>
+    </div>`).join('');
+}
+function emptyChartMsg(){ return `<p style="color:var(--text-faint);font-size:12.5px">No exceptions of this kind — clean run.</p>`; }
+
+/* ---------------- EXCEPTIONS ---------------- */
+function buildExceptionRows(run){
+  const rows = [];
+  run.mismatches.forEach(m=> rows.push({ type:'Field mismatch', severity:'warn', stage:`${m.fromStage} → ${m.toStage}`, key:m.key, field:m.field, expected:m.expected, actual:m.actual, rule:m.rule }));
+  run.dryRunRejections.forEach(d=> rows.push({ type:'Dry‑run rejection', severity: d.ruleViolated==='required'?'crit':'warn', stage:run.stageNames[run.stageNames.length-1], key:d.key, field:d.field, expected:'(spec rule)', actual:d.reason, rule:d.ruleViolated }));
+  run.transitions.forEach(t=>{
+    t.dropped.forEach(k=> rows.push({ type:'Missing record', severity:'crit', stage:`${t.fromStage} → ${t.toStage}`, key:k, field:run.keyFieldName, expected:'present', actual:'missing', rule:'presence' }));
+    t.added.forEach(k=> rows.push({ type:'Unexpected record', severity:'warn', stage:`${t.fromStage} → ${t.toStage}`, key:k, field:run.keyFieldName, expected:'absent', actual:'present', rule:'presence' }));
+  });
+  run.schemaRows.filter(r=>r.status!=='match').forEach(r=> rows.push({ type:'Schema violation', severity:'crit', stage:'Output schema', key:`col#${r.index}`, field:r.expected, expected:r.expected, actual:r.actual, rule:r.status }));
+  return rows;
+}
+function renderExceptionFilters(){
+  const rows = buildExceptionRows(State.currentRun);
+  const typeOpts = uniqCounts(rows.map(r=>r.type));
+  const stageOpts = uniqCounts(rows.map(r=>r.stage));
+  const sevOpts = uniqCounts(rows.map(r=>r.severity));
+  mountMultiSelect('mselExcType','Type', typeOpts, State.excFilters.type, onExcFilterChange);
+  mountMultiSelect('mselExcStage','Stage', stageOpts, State.excFilters.stage, onExcFilterChange);
+  mountMultiSelect('mselExcSeverity','Severity', sevOpts, State.excFilters.severity, onExcFilterChange);
+}
+function uniqCounts(arr){
+  const m=new Map(); arr.forEach(v=>m.set(v,(m.get(v)||0)+1));
+  return Array.from(m.entries()).map(([value,count])=>({value,label:value,count,color:'var(--text-dim)'}));
+}
+function onExcFilterChange(){ State.excPage=1; renderExceptions(); }
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('excSearch').addEventListener('input', debounce((e)=>{ State.excFilters.search=e.target.value.trim().toLowerCase(); State.excPage=1; renderExceptions(); },200));
+  document.getElementById('excClear').addEventListener('click', ()=>{
+    State.excFilters.search=''; State.excFilters.type.clear(); State.excFilters.stage.clear(); State.excFilters.severity.clear();
+    document.getElementById('excSearch').value='';
+    if(State.currentRun){ renderExceptionFilters(); renderExceptions(); }
+  });
+});
+function getFilteredExceptions(){
+  if(!State.currentRun) return [];
+  const f = State.excFilters;
+  return buildExceptionRows(State.currentRun).filter(r=>{
+    if(f.type.size && !f.type.has(r.type)) return false;
+    if(f.stage.size && !f.stage.has(r.stage)) return false;
+    if(f.severity.size && !f.severity.has(r.severity)) return false;
+    if(f.search){
+      const hay = [r.type,r.stage,r.key,r.field,r.expected,r.actual].join(' ').toLowerCase();
+      if(!hay.includes(f.search)) return false;
+    }
+    return true;
+  });
+}
+function renderExceptions(){
+  if(!State.currentRun){ document.getElementById('excTable').innerHTML=''; document.getElementById('excInfo').textContent='0 rows'; return; }
+  const rows = getFilteredExceptions();
+  document.getElementById('cntExceptions').textContent = fmtNum(rows.length);
+  const pageSize = State.excPageSize;
+  const totalPages = Math.max(1, Math.ceil(rows.length/pageSize));
+  if(State.excPage>totalPages) State.excPage=totalPages;
+  const start=(State.excPage-1)*pageSize;
+  const page = rows.slice(start,start+pageSize);
+  const table = document.getElementById('excTable');
+  table.innerHTML = `
+    <thead><tr><th>Type</th><th>Severity</th><th>Key</th><th>Stage</th><th>Field</th><th>Expected</th><th>Actual</th><th>Rule</th></tr></thead>
+    <tbody>
+      ${page.length? page.map(r=>`
+        <tr>
+          <td><span class="badge badge-neutral">${esc(r.type)}</span></td>
+          <td>${r.severity==='crit'?'<span class="badge badge-crit">CRIT</span>':'<span class="badge badge-warn">WARN</span>'}</td>
+          <td class="mono" style="color:var(--text)">${esc(r.key)}</td>
+          <td>${esc(r.stage)}</td>
+          <td class="mono">${esc(r.field)}</td>
+          <td class="mono">${esc(r.expected)}</td>
+          <td class="mono" style="color:${r.severity==='crit'?'var(--crit)':'var(--warn)'}">${esc(r.actual)}</td>
+          <td>${esc(r.rule)}</td>
+        </tr>`).join('') : `<tr><td colspan="8" style="text-align:center;padding:26px;color:var(--text-faint)">No exceptions match the current filters.</td></tr>`}
+    </tbody>`;
+  document.getElementById('excInfo').textContent = rows.length? `Showing ${start+1}–${Math.min(start+pageSize,rows.length)} of ${fmtNum(rows.length)}` : '0 rows';
+  const pager = document.getElementById('excPager');
+  pager.innerHTML = `
+    <button ${State.excPage<=1?'disabled':''} data-p="1">«</button>
+    <button ${State.excPage<=1?'disabled':''} data-p="${State.excPage-1}">‹</button>
+    <span style="font-size:12px;color:var(--text-dim);padding:0 8px;font-family:var(--mono)">${State.excPage} / ${totalPages}</span>
+    <button ${State.excPage>=totalPages?'disabled':''} data-p="${State.excPage+1}">›</button>
+    <button ${State.excPage>=totalPages?'disabled':''} data-p="${totalPages}">»</button>`;
+  pager.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ State.excPage=Number(b.dataset.p); renderExceptions(); }));
+}
+
+/* ============================================================
+   GENERIC MULTI-SELECT (reused for exception filters)
+============================================================ */
+function mountMultiSelect(containerId, label, options, selectedSet, onChange){
+  const container = document.getElementById(containerId);
+  if(!container) return;
+  container.innerHTML='';
+  const btn=document.createElement('button'); btn.className='msel-btn';
+  const panel=document.createElement('div'); panel.className='msel-panel';
+  function refreshBtn(){
+    const n=selectedSet.size;
+    btn.classList.toggle('has-filter', n>0);
+    btn.innerHTML = `<span>${label}${n?` · ${n}`:''}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>`;
+  }
+  panel.innerHTML = `<div class="msel-actions"><button data-a="all">Select all</button><button data-a="none">Clear</button></div><div class="msel-list"></div>`;
+  const listEl = panel.querySelector('.msel-list');
+  function renderOpts(){
+    listEl.innerHTML='';
+    options.forEach(o=>{
+      const row=document.createElement('label'); row.className='msel-opt';
+      row.innerHTML = `<input type="checkbox" ${selectedSet.has(o.value)?'checked':''}><span class="lbl mono" style="font-size:12px">${esc(o.label)}</span><span class="cnt">${o.count}</span>`;
+      row.querySelector('input').addEventListener('change',(e)=>{ if(e.target.checked) selectedSet.add(o.value); else selectedSet.delete(o.value); refreshBtn(); onChange(); });
+      listEl.appendChild(row);
+    });
+  }
+  renderOpts();
+  panel.querySelector('[data-a="all"]').addEventListener('click', ()=>{ options.forEach(o=>selectedSet.add(o.value)); renderOpts(); refreshBtn(); onChange(); });
+  panel.querySelector('[data-a="none"]').addEventListener('click', ()=>{ selectedSet.clear(); renderOpts(); refreshBtn(); onChange(); });
+  btn.addEventListener('click', (e)=>{ e.stopPropagation(); document.querySelectorAll('.msel-panel.open').forEach(p=>{ if(p!==panel) p.classList.remove('open'); }); panel.classList.toggle('open'); });
+  refreshBtn();
+  container.appendChild(btn); container.appendChild(panel);
+}
+document.addEventListener('click', (e)=>{ if(!e.target.closest('.msel')) document.querySelectorAll('.msel-panel.open').forEach(p=>p.classList.remove('open')); });
+
+/* ============================================================
+   RENDER: LINEAGE (pipeline flow + record trace)
+============================================================ */
+function renderLineage(){
+  const run = State.currentRun;
+  const host = document.getElementById('pipelineHost');
+  if(!run){ host.innerHTML=''; return; }
+  const stages = run.stageNames;
+  const counts = [run.kpis.totalSource, ...run.transitions.map(t=>t.toCount)];
+  const W = Math.max(900, host.clientWidth||900), H=340;
+  const n = stages.length;
+  const boxW = 150, boxH = 56;
+  const margin = 60;
+  const gap = (W - margin*2 - boxW) / (n-1);
+  const y = H/2;
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<rect x="0" y="0" width="${W}" height="${H}" fill="#0D1219"/>`;
+
+  // flows
+  run.transitions.forEach((t,i)=>{
+    const x1 = margin + i*gap + boxW, x2 = margin + (i+1)*gap;
+    const maxCount = Math.max(1, ...counts);
+    const flowWidth = Math.max(3, (t.matched/maxCount)*40);
+    svg += `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#5B9BFF" stroke-width="${flowWidth}" stroke-linecap="round" opacity="0.35"/>`;
+    svg += `<text x="${(x1+x2)/2}" y="${y-flowWidth/2-10}" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#94A3B8">${t.matched} matched</text>`;
+    if(t.dropped.length){
+      svg += `<text x="${(x1+x2)/2}" y="${y+flowWidth/2+22}" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#FF7A6E">−${t.dropped.length} dropped</text>`;
+    }
+    if(t.added.length){
+      svg += `<text x="${(x1+x2)/2}" y="${y+flowWidth/2+ (t.dropped.length?36:22)}" text-anchor="middle" font-family="IBM Plex Mono" font-size="10.5" fill="#F2B84B">+${t.added.length} added</text>`;
+    }
+  });
+
+  // stage boxes
+  stages.forEach((name,i)=>{
+    const x = margin + i*gap;
+    const isOut = i===stages.length-1;
+    svg += `<rect x="${x}" y="${y-boxH/2}" width="${boxW}" height="${boxH}" rx="10" fill="#131A24" stroke="${isOut?'#B58CF5':'#35D7BE'}" stroke-width="1.8"/>`;
+    svg += `<text x="${x+boxW/2}" y="${y-6}" text-anchor="middle" font-family="Space Grotesk" font-weight="600" font-size="12.5" fill="#E7ECF3">${escXml(name.length>20?name.slice(0,19)+'…':name)}</text>`;
+    svg += `<text x="${x+boxW/2}" y="${y+14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="11" fill="#94A3B8">${fmtNum(counts[i])} records</text>`;
+  });
+  svg += `</svg>`;
+  host.innerHTML = svg;
+
+  // trace key list
+  const dl = document.getElementById('traceKeyList');
+  const firstStage = State.stages[0];
+  const allKeys = run._live ? Array.from(run._live.canonicalByStage[firstStage.id].keys()) : [];
+  dl.innerHTML = allKeys.slice(0,500).map(k=>`<option value="${esc(k)}">`).join('');
+}
+function escXml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function traceKey(){
+  const run = State.currentRun;
+  const input = document.getElementById('traceKeyInput');
+  const key = input.value.trim();
+  const host = document.getElementById('traceHost');
+  if(!run || !run._live){ host.innerHTML=`<p style="color:var(--text-faint);font-size:12.5px">Run a reconciliation first.</p>`; return; }
+  if(!key){ toast('Enter a key value to trace.', 'warn'); return; }
+
+  const cardsHtml = [];
+  let prevCanon = null;
+  State.stages.forEach((stage,idx)=>{
+    const map = run._live.canonicalByStage[stage.id];
+    const recs = map.get(key);
+    if(!recs){
+      cardsHtml.push(`<div class="trace-card missing"><h5>${esc(stage.name)}</h5><p style="color:var(--crit);font-size:11.5px;margin:0">Not found at this stage</p></div>`);
+      if(idx<State.stages.length-1) cardsHtml.push(`<div class="trace-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>`);
+      return;
+    }
+    const canon = recs[0];
+    const rowsHtml = State.mapping.map(m=>{
+      const val = canon[m.canonical];
+      const changed = prevCanon && (m.canonical in prevCanon) && String(prevCanon[m.canonical]).trim()!==String(val).trim();
+      return `<div class="tf-row"><span class="tf-k">${esc(m.canonical)}</span><span class="tf-v ${changed?'changed':''}">${esc(val===undefined?'—':val)}</span></div>`;
+    }).join('');
+    cardsHtml.push(`<div class="trace-card"><h5>${esc(stage.name)} ${recs.length>1?`<span class="badge badge-warn" style="margin-left:6px">×${recs.length}</span>`:''}</h5>${rowsHtml}</div>`);
+    prevCanon = canon;
+    if(idx<State.stages.length-1) cardsHtml.push(`<div class="trace-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>`);
+  });
+  host.innerHTML = `<div class="trace-timeline">${cardsHtml.join('')}</div>`;
+}
+
+/* ============================================================
+   RENDER: VALIDATION TAB
+============================================================ */
+function renderValidation(){
+  const run = State.currentRun;
+  if(!run) return;
+  document.getElementById('checksumTable').innerHTML = `
+    <thead><tr><th>Stage</th><th>File</th><th>Size</th><th>Rows</th><th>SHA‑256</th></tr></thead>
+    <tbody>${run.fileMeta.map(f=>`
+      <tr><td>${esc(f.stageName)}</td><td class="mono">${esc(f.fileName)}</td><td class="mono">${f.size?fmtNum(f.size)+' B':'—'}</td><td class="mono">${fmtNum(f.rowCount)}</td>
+      <td class="mono" style="font-size:10.5px;word-break:break-all">${esc(f.checksum||'n/a')}</td></tr>`).join('')}</tbody>`;
+
+  document.getElementById('formatTable').innerHTML = `
+    <thead><tr><th>Check</th><th>Expected</th><th>Actual</th><th>Result</th></tr></thead>
+    <tbody>${run.formatChecks.map(c=>`
+      <tr><td>${esc(c.check)}</td><td class="mono">${esc(c.expected)}</td><td class="mono">${esc(c.actual)}</td>
+      <td>${c.pass?'<span class="badge badge-ok">PASS</span>':'<span class="badge badge-crit">FAIL</span>'}</td></tr>`).join('')}</tbody>`;
+
+  document.getElementById('schemaTable').innerHTML = `
+    <thead><tr><th>#</th><th>Expected column</th><th>Actual column</th><th>Status</th></tr></thead>
+    <tbody>${run.schemaRows.map(r=>`
+      <tr><td class="mono">${r.index}</td><td class="mono">${esc(r.expected)}</td><td class="mono">${esc(r.actual)}</td>
+      <td>${r.status==='match'?'<span class="badge badge-ok">MATCH</span>':r.status==='misplaced'?'<span class="badge badge-warn">OUT OF ORDER</span>':r.status==='missing'?'<span class="badge badge-crit">MISSING</span>':r.status==='extra'?'<span class="badge badge-warn">EXTRA</span>':'<span class="badge badge-crit">MISMATCH</span>'}</td></tr>`).join('')}</tbody>`;
+
+  document.getElementById('dryRunTable').innerHTML = run.dryRunRejections.length ? `
+    <thead><tr><th>Key</th><th>Field</th><th>Reason</th><th>Rule</th></tr></thead>
+    <tbody>${run.dryRunRejections.map(d=>`
+      <tr><td class="mono" style="color:var(--text)">${esc(d.key)}</td><td class="mono">${esc(d.field)}</td><td>${esc(d.reason)}</td>
+      <td>${d.ruleViolated==='required'?'<span class="badge badge-crit">REQUIRED</span>':d.ruleViolated==='uniqueness'?'<span class="badge badge-crit">UNIQUENESS</span>':'<span class="badge badge-warn">FORMAT</span>'}</td></tr>`).join('')}</tbody>` :
+    `<tbody><tr><td style="text-align:center;padding:24px;color:var(--text-faint)">No dry‑run rejections — output rows satisfy the schema spec.</td></tr></tbody>`;
+}
+
+/* ============================================================
+   RENDER: HISTORY & AUDIT
+============================================================ */
+function renderHistory(){
+  const host = document.getElementById('historyList');
+  if(!State.runs.length){ host.innerHTML = `<p style="color:var(--text-faint);font-size:12.5px">No runs yet.</p>`; return; }
+  host.innerHTML = State.runs.map(r=>`
+    <div class="history-card">
+      <input type="checkbox" data-cmp="${r.runId}" ${State.compareSel.has(r.runId)?'checked':''}>
+      <div>
+        <div class="hc-id">${esc(r.runId)}</div>
+        <div class="hc-time">${fmtTime(r.timestamp)} · config ${esc(r.configVersion)}</div>
+      </div>
+      ${badgeAlert(r.alertLevel)}
+      ${stampHtml(r.approval.status)}
+      <div class="hc-kpis">
+        <span>Match <b>${fmtPct(r.kpis.matchRatePct)}</b></span>
+        <span>Mismatches <b>${r.kpis.mismatchCount}</b></span>
+        <span>Missing <b>${r.kpis.totalDropped}</b></span>
+        <span>Exceptions <b>${r.kpis.exceptionCount}</b></span>
+      </div>
+      <button class="btn btn-sm" data-load="${r.runId}">View</button>
+      <button class="btn btn-sm" data-exp="${r.runId}">Export JSON</button>
+    </div>`).join('');
+  host.querySelectorAll('[data-cmp]').forEach(cb=>cb.addEventListener('change',(e)=>{
+    const id=cb.dataset.cmp;
+    if(e.target.checked){ if(State.compareSel.size>=2){ toast('You can only compare two runs at a time.', 'warn'); cb.checked=false; return; } State.compareSel.add(id); }
+    else State.compareSel.delete(id);
+    document.getElementById('btnCompareRuns').disabled = State.compareSel.size!==2;
+  }));
+  host.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>{
+    const r = State.runs.find(x=>x.runId===b.dataset.load);
+    if(r){ State.currentRun=r; renderAllAfterRun(); document.querySelector('.tab[data-tab="dashboard"]').click(); }
+  }));
+  host.querySelectorAll('[data-exp]').forEach(b=>b.addEventListener('click',()=>{
+    const r = State.runs.find(x=>x.runId===b.dataset.exp);
+    exportRunJson(r);
+  }));
+}
+
+function renderAuditTable(){
+  const table = document.getElementById('auditTable');
+  if(!table) return;
+  table.innerHTML = `
+    <thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Detail</th></tr></thead>
+    <tbody>${AuditLog.length ? AuditLog.map(a=>`
+      <tr><td class="mono" style="white-space:nowrap">${fmtTime(a.ts)}</td><td>${esc(a.actor)}</td><td><span class="badge badge-neutral">${esc(a.action)}</span></td><td>${esc(a.detail)}</td></tr>`).join('') :
+      `<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-faint)">No audit events yet.</td></tr>`}</tbody>`;
+}
+
+function renderCompare(){
+  if(State.compareSel.size!==2) return;
+  const [idA,idB] = Array.from(State.compareSel);
+  const a = State.runs.find(r=>r.runId===idA) || findImportedRun(idA);
+  const b = State.runs.find(r=>r.runId===idB) || findImportedRun(idB);
+  if(!a||!b) return;
+  const panel = document.getElementById('comparePanel');
+  panel.classList.remove('hidden');
+  const rows = [
+    ['Status', badgeAlert(a.alertLevel), badgeAlert(b.alertLevel)],
+    ['Match rate', fmtPct(a.kpis.matchRatePct), fmtPct(b.kpis.matchRatePct)],
+    ['Mismatch rate', fmtPct(a.kpis.mismatchRatePct), fmtPct(b.kpis.mismatchRatePct)],
+    ['Field mismatches', a.kpis.mismatchCount, b.kpis.mismatchCount],
+    ['Missing records', a.kpis.totalDropped, b.kpis.totalDropped],
+    ['Unexpected records', a.kpis.totalAdded, b.kpis.totalAdded],
+    ['Total exceptions', a.kpis.exceptionCount, b.kpis.exceptionCount],
+    ['Approval', a.approval.status, b.approval.status],
+  ];
+  document.getElementById('compareBody').innerHTML = `
+    <table class="dt"><thead><tr><th>Metric</th><th>${esc(a.runId)}<br><span style="font-weight:400;color:var(--text-faint)">${fmtTime(a.timestamp)}</span></th><th>${esc(b.runId)}<br><span style="font-weight:400;color:var(--text-faint)">${fmtTime(b.timestamp)}</span></th><th>Δ</th></tr></thead>
+    <tbody>${rows.map(([label,av,bv])=>{
+      let delta='—';
+      if(typeof av==='number' && typeof bv==='number'){ const d=bv-av; delta = (d>0?'+':'')+d; }
+      return `<tr><td>${esc(label)}</td><td>${av}</td><td>${bv}</td><td class="mono">${delta}</td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+let ImportedRuns = [];
+function findImportedRun(id){ return ImportedRuns.find(r=>r.runId===id); }
+
+/* ============================================================
+   EXPORTS
+============================================================ */
+function exportExceptionsExcel(){
+  if(!State.currentRun){ toast('Run a reconciliation first.', 'warn'); return; }
+  const rows = getFilteredExceptions();
+  const aoa = [['Type','Severity','Key','Stage','Field','Expected','Actual','Rule']];
+  rows.forEach(r=>aoa.push([r.type,r.severity,r.key,r.stage,r.field,r.expected,r.actual,r.rule]));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Exceptions');
+  const summaryAoa = [['Metric','Value']];
+  Object.entries(State.currentRun.kpis).forEach(([k,v])=>{ if(typeof v!=='object') summaryAoa.push([k, v]); });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summaryAoa), 'Run Summary');
+  XLSX.writeFile(wb, `${State.currentRun.runId}_exceptions.xlsx`);
+  toast('Excel exception report exported.');
+  auditLog('export', `Exported exception report (Excel) for ${State.currentRun.runId}.`, 'You');
+}
+function exportExceptionsCsv(){
+  if(!State.currentRun){ toast('Run a reconciliation first.', 'warn'); return; }
+  const rows = getFilteredExceptions();
+  const header = ['Type','Severity','Key','Stage','Field','Expected','Actual','Rule'];
+  const lines = [header.join(',')];
+  rows.forEach(r=> lines.push([r.type,r.severity,r.key,r.stage,r.field,r.expected,r.actual,r.rule].map(csvEscape).join(',')));
+  downloadText(lines.join('\r\n'), `${State.currentRun.runId}_exceptions.csv`, 'text/csv');
+  toast('CSV exception report exported.');
+  auditLog('export', `Exported exception report (CSV) for ${State.currentRun.runId}.`, 'You');
+}
+function exportRunJson(run){
+  const clone = JSON.parse(JSON.stringify(run, (k,v)=> k==='_live' ? undefined : v));
+  downloadText(JSON.stringify(clone,null,2), `${run.runId}_archive.json`, 'application/json');
+  toast('Run archive exported — re‑import later to replay or compare.');
+  auditLog('export', `Exported run archive ${run.runId}.`, 'You');
+}
+function importRunArchive(file){
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    try{
+      const run = JSON.parse(e.target.result);
+      if(!run.runId || !run.kpis){ toast('Not a valid ReconLedger run archive.', 'err'); return; }
+      ImportedRuns.push(run);
+      toast(`Imported ${run.runId} — available in Run history for comparison.`);
+      renderHistoryWithImports();
+      auditLog('import', `Imported run archive ${run.runId}.`, 'You');
+    }catch(err){ toast('Could not parse archive JSON.', 'err'); }
+  };
+  reader.readAsText(file);
+}
+function renderHistoryWithImports(){
+  const host = document.getElementById('historyList');
+  const all = [...State.runs.map(r=>({r,imported:false})), ...ImportedRuns.map(r=>({r,imported:true}))];
+  if(!all.length){ host.innerHTML = `<p style="color:var(--text-faint);font-size:12.5px">No runs yet.</p>`; return; }
+  host.innerHTML = all.map(({r,imported})=>`
+    <div class="history-card">
+      <input type="checkbox" data-cmp="${r.runId}" ${State.compareSel.has(r.runId)?'checked':''}>
+      <div>
+        <div class="hc-id">${esc(r.runId)} ${imported?'<span class="badge badge-blue" style="margin-left:6px">IMPORTED</span>':''}</div>
+        <div class="hc-time">${fmtTime(r.timestamp)} · config ${esc(r.configVersion)}</div>
+      </div>
+      ${badgeAlert(r.alertLevel)}
+      ${stampHtml(r.approval.status)}
+      <div class="hc-kpis">
+        <span>Match <b>${fmtPct(r.kpis.matchRatePct)}</b></span>
+        <span>Mismatches <b>${r.kpis.mismatchCount}</b></span>
+        <span>Missing <b>${r.kpis.totalDropped}</b></span>
+        <span>Exceptions <b>${r.kpis.exceptionCount}</b></span>
+      </div>
+      ${!imported? `<button class="btn btn-sm" data-load="${r.runId}">View</button>`:''}
+      <button class="btn btn-sm" data-exp="${r.runId}">Export JSON</button>
+    </div>`).join('');
+  host.querySelectorAll('[data-cmp]').forEach(cb=>cb.addEventListener('change',(e)=>{
+    const id=cb.dataset.cmp;
+    if(e.target.checked){ if(State.compareSel.size>=2){ toast('You can only compare two runs at a time.', 'warn'); cb.checked=false; return; } State.compareSel.add(id); }
+    else State.compareSel.delete(id);
+    document.getElementById('btnCompareRuns').disabled = State.compareSel.size!==2;
+  }));
+  host.querySelectorAll('[data-load]').forEach(b=>b.addEventListener('click',()=>{
+    const r = State.runs.find(x=>x.runId===b.dataset.load);
+    if(r){ State.currentRun=r; renderAllAfterRun(); document.querySelector('.tab[data-tab="dashboard"]').click(); }
+  }));
+  host.querySelectorAll('[data-exp]').forEach(b=>b.addEventListener('click',()=>{
+    const r = all.find(x=>x.r.runId===b.dataset.exp).r;
+    exportRunJson(r);
+  }));
+}
+function exportAuditCsv(){
+  const header=['Timestamp','Actor','Action','Detail'];
+  const lines=[header.join(',')];
+  AuditLog.forEach(a=>lines.push([a.ts,a.actor,a.action,a.detail].map(csvEscape).join(',')));
+  downloadText(lines.join('\r\n'), `audit_trail_${Date.now()}.csv`, 'text/csv');
+  toast('Audit trail exported.');
+}
+
+function exportConfig(){
+  readThresholdsFromUI();
+  const cfg = {
+    stages: State.stages.map(s=>({name:s.name})),
+    mapping: State.mapping,
+    spec: State.spec,
+    fmtSpec: State.fmtSpec,
+    thresholds: State.thresholds,
+    alerting: State.alerting
+  };
+  downloadText(JSON.stringify(cfg,null,2), `reconledger_config_${State.alerting.configVersion}.json`, 'application/json');
+  toast('Configuration exported.');
+  auditLog('config_export', `Exported configuration ${State.alerting.configVersion}.`, 'You');
+}
+function importConfig(file){
+  const reader = new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const cfg = JSON.parse(e.target.result);
+      const existingFiles = State.stages.map(s=>({file:s.file,parsed:s.parsed}));
+      State.stages = (cfg.stages||[]).map((s,i)=>({ id:uid(), name:s.name, file: existingFiles[i]?existingFiles[i].file:null, parsed: existingFiles[i]?existingFiles[i].parsed:null }));
+      if(State.stages.length<2){ addStage('Source'); addStage('Output'); }
+      // remap mapping cols by stage index since ids regenerated
+      State.mapping = (cfg.mapping||[]).map(m=>{
+        const cols={};
+        Object.keys(m.cols||{}).forEach((oldId,i)=>{}); // old ids unknown mapping; best effort skip
+        return { canonical:m.canonical, key:m.key, cols:{}, rule:m.rule };
+      });
+      State.spec = cfg.spec || [];
+      State.fmtSpec = cfg.fmtSpec || State.fmtSpec;
+      State.thresholds = cfg.thresholds || State.thresholds;
+      State.alerting = cfg.alerting || State.alerting;
+      applyConfigToUI();
+      renderStageStrip(); renderMappingTable(); renderSpecTable();
+      toast('Configuration loaded — re‑map stage columns if stage files changed.', 'warn');
+      auditLog('config_import', `Imported configuration file "${file.name}".`, 'You');
+    }catch(err){ toast('Could not parse configuration JSON.', 'err'); }
+  };
+  reader.readAsText(file);
+}
+function applyConfigToUI(){
+  document.getElementById('specDelimiter').value = State.fmtSpec.delimiter === '\t' ? '\\t' : State.fmtSpec.delimiter;
+  document.getElementById('specLineEnding').value = State.fmtSpec.lineEnding;
+  document.getElementById('specQuote').value = State.fmtSpec.quote;
+  document.getElementById('specHeaderRequired').checked = State.fmtSpec.headerRequired;
+  document.getElementById('specUtf8').checked = State.fmtSpec.requireUtf8;
+  document.getElementById('thMissing').value = State.thresholds.missing;
+  document.getElementById('thWarnPct').value = State.thresholds.warnPct;
+  document.getElementById('thBlockPct').value = State.thresholds.blockPct;
+  document.getElementById('autoBlock').checked = State.thresholds.autoBlock;
+  document.getElementById('webhookUrl').value = State.alerting.webhookUrl||'';
+  document.getElementById('alertEmail').value = State.alerting.email||'';
+  document.getElementById('externalValidatorUrl').value = State.alerting.externalValidatorUrl||'';
+  document.getElementById('configVersion').value = State.alerting.configVersion||'v1.0';
+}
+
+/* ============================================================
+   TABS
+============================================================ */
+function switchTab(name){
+  State.activeTab = name;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.tab===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('hidden', p.id!=='panel-'+name));
+  if(name==='lineage' && State.currentRun) renderLineage();
+}
+
+/* ============================================================
+   EVENT WIRING
+============================================================ */
+document.querySelectorAll('.tab').forEach(tab=> tab.addEventListener('click', ()=>switchTab(tab.dataset.tab)));
+
+document.getElementById('btnRun').addEventListener('click', ()=>{ runReconciliation(); });
+document.getElementById('btnAutoMap').addEventListener('click', autoMapFields);
+document.getElementById('btnAddField').addEventListener('click', addMappingField);
+document.getElementById('btnAddSpecRow').addEventListener('click', ()=>addSpecRow());
+document.getElementById('btnLoadSpecFromFile').addEventListener('click', loadSpecFromOutputFile);
+
+document.getElementById('stageFileInput').addEventListener('change', (e)=>{
+  const f = e.target.files[0];
+  if(f && stageFilePending){ attachFileToStage(stageFilePending, f); }
+  e.target.value=''; stageFilePending=null;
+});
+
+document.getElementById('btnSampleFromDashboard').addEventListener('click', ()=>{ loadSampleDataset(); switchTab('setup'); });
+
+document.getElementById('btnConfigExport').addEventListener('click', exportConfig);
+document.getElementById('btnConfigImport').addEventListener('click', ()=>document.getElementById('configFileInput').click());
+document.getElementById('configFileInput').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) importConfig(f); e.target.value=''; });
+
+document.getElementById('btnExpExcExcel').addEventListener('click', exportExceptionsExcel);
+document.getElementById('btnExpExcCsv').addEventListener('click', exportExceptionsCsv);
+
+document.getElementById('btnImportRun').addEventListener('click', ()=>document.getElementById('runFileInput').click());
+document.getElementById('runFileInput').addEventListener('change', (e)=>{ const f=e.target.files[0]; if(f) importRunArchive(f); e.target.value=''; });
+document.getElementById('btnCompareRuns').addEventListener('click', renderCompare);
+document.getElementById('btnExpAudit').addEventListener('click', exportAuditCsv);
+
+document.getElementById('btnTrace').addEventListener('click', traceKey);
+document.getElementById('traceKeyInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') traceKey(); });
+
+document.getElementById('reasonModalClose').addEventListener('click', closeReasonModal);
+document.getElementById('reasonModal').addEventListener('click', (e)=>{ if(e.target.id==='reasonModal'){} });
+document.querySelector('#reasonModal .modal-overlay')?.addEventListener('click', ()=>{});
+document.getElementById('reasonModal').addEventListener('click', (e)=>{ if(e.target.id==='reasonModal') closeReasonModal(); });
+document.getElementById('reasonConfirm').addEventListener('click', ()=>{
+  if(State.reasonModalCtx) State.reasonModalCtx();
+  closeReasonModal();
+});
+
+window.addEventListener('resize', debounce(()=>{ if(State.activeTab==='lineage' && State.currentRun) renderLineage(); }, 250));
+
+// override renderHistory to include imported runs from now on
+renderHistory = renderHistoryWithImports;
+
+/* ============================================================
+   INIT
+============================================================ */
+addStage('Source');
+addStage('Output');
+addSpecRow({name:'trade_id'});
+renderStageStrip();
+renderMappingTable();
+renderSpecTable();
+
+})();
+</script>
+</body>
+</html>
