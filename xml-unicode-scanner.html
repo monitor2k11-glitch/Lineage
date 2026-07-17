@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glyph Sweep — XML Non-English Character Scanner</title>
+<style>
+  :root{
+    --bg:#0a0e13;
+    --panel:#121820;
+    --panel-2:#161e28;
+    --border:#212b37;
+    --text:#dfe6ed;
+    --muted:#7b8a99;
+    --cyan:#4fd1c5;
+    --amber:#f2b84b;
+    --red:#ff6b6b;
+    --mono: 'JetBrains Mono', 'Consolas', 'SF Mono', monospace;
+    --sans: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --t-latin:#8cd6c4;
+    --t-cyrillic:#f2b84b;
+    --t-greek:#7fb2f0;
+    --t-indic:#e29be0;
+    --t-cjk:#f08a5d;
+    --t-semitic:#b4e197;
+    --t-other:#ff6b6b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #0e1720 0%, transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding:28px 32px 80px;
+  }
+  a{color:var(--cyan);}
+  .wrap{max-width:1240px;margin:0 auto;}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px;border-bottom:1px solid var(--border);padding-bottom:18px;}
+  .brand{display:flex;align-items:baseline;gap:12px;}
+  .brand .mark{font-family:var(--mono);font-size:13px;color:var(--cyan);letter-spacing:.12em;border:1px solid var(--cyan);padding:2px 7px;border-radius:3px;}
+  h1{font-size:26px;font-weight:600;margin:0;letter-spacing:-.01em;}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px;font-family:var(--mono);}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:20px;}
+  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 14px;font-weight:600;}
+
+  /* dropzone */
+  .drop{
+    border:1.5px dashed var(--border);
+    border-radius:10px;
+    padding:34px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+    background:var(--panel-2);
+  }
+  .drop:hover, .drop.drag{border-color:var(--cyan); background:#101821;}
+  .drop input{display:none;}
+  .drop .icon{font-family:var(--mono);color:var(--cyan);font-size:22px;margin-bottom:8px;}
+  .drop .txt{color:var(--text);font-size:14px;}
+  .drop .hint{color:var(--muted);font-size:12px;margin-top:6px;font-family:var(--mono);}
+  .filename{font-family:var(--mono);color:var(--amber);font-size:13px;margin-top:10px;}
+
+  /* progress */
+  .progress-row{display:flex;align-items:center;gap:14px;margin-top:16px;}
+  .progress-label{font-family:var(--mono);font-size:12px;color:var(--muted);min-width:150px;}
+  .bar-track{flex:1;height:8px;background:#0d131a;border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+  .bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),#7fe0d6);transition:width .12s linear;}
+  .bar-fill.phase-analyze{background:linear-gradient(90deg,var(--amber),#f7d189);}
+  .progress-pct{font-family:var(--mono);font-size:12px;color:var(--text);min-width:42px;text-align:right;}
+  .hidden{display:none !important;}
+
+  /* dashboard stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+  .stat{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:16px 18px;}
+  .stat .num{font-family:var(--mono);font-size:28px;font-weight:600;color:var(--cyan);}
+  .stat .num.warn{color:var(--red);}
+  .stat .lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+  .stat .sub2{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px;}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:14px;}
+  .legend .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .legend .dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+  /* toolbar */
+  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+  .toolbar .left{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  input[type="text"]{
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:8px 10px;border-radius:6px;font-family:var(--mono);font-size:12px;min-width:200px;
+  }
+  select{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:var(--mono);font-size:12px;}
+  button{
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:8px 14px;border-radius:6px;font-family:var(--mono);font-size:12px;cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  button:hover{border-color:var(--cyan);color:var(--cyan);}
+  button.primary{background:var(--cyan);color:#06110f;border-color:var(--cyan);font-weight:600;}
+  button.primary:hover{opacity:.88;color:#06110f;}
+  button:disabled{opacity:.35;cursor:not-allowed;}
+  button.primary:disabled{background:var(--panel-2);color:var(--muted);}
+
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;}
+  thead th{
+    text-align:left;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+    font-size:10.5px;border-bottom:1px solid var(--border);padding:8px 10px;position:sticky;top:0;background:var(--panel);
+    cursor:pointer;white-space:nowrap;
+  }
+  thead th:hover{color:var(--cyan);}
+  tbody td{padding:7px 10px;border-bottom:1px solid #182029;vertical-align:top;}
+  tbody tr:hover{background:#101720;}
+  .glyph{display:inline-block;min-width:22px;text-align:center;padding:1px 5px;border-radius:4px;background:#0d131a;border:1px solid var(--border);}
+  .type-badge{display:inline-flex;align-items:center;gap:5px;}
+  .type-badge .dot{width:8px;height:8px;border-radius:2px;flex:none;}
+  .table-scroll{max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+  .value-cell{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);}
+  .value-cell mark{background:rgba(255,107,107,.28);color:#fff;border-radius:2px;padding:0 1px;}
+  .tag-cell{color:var(--amber);}
+  .empty-state{padding:26px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:12.5px;}
+
+  .pager{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:10px;font-family:var(--mono);font-size:12px;color:var(--muted);}
+  .pager button{padding:5px 10px;}
+
+  footer{margin-top:36px;color:var(--muted);font-size:11.5px;font-family:var(--mono);text-align:center;}
+
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-track{background:#0d131a;}
+  ::-webkit-scrollbar-thumb{background:#26313d;border-radius:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="mark">GLYPH SWEEP</span>
+      <div>
+        <h1>XML Non-English Character Scanner</h1>
+        <div class="sub">client-side · nothing leaves the browser</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="panel">
+    <h2>1. Load File</h2>
+    <div class="drop" id="dropZone">
+      <input type="file" id="fileInput" accept=".xml,text/xml,application/xml" />
+      <div class="icon">&lt;/&gt;</div>
+      <div class="txt">Drop an XML file here, or click to browse</div>
+      <div class="hint">Parsed entirely in your browser — the file is never uploaded anywhere</div>
+      <div class="filename" id="fileNameLabel"></div>
+    </div>
+
+    <div id="progressBlock" class="hidden">
+      <div class="progress-row">
+        <div class="progress-label" id="phaseLoadLabel">Reading file…</div>
+        <div class="bar-track"><div class="bar-fill" id="barLoad"></div></div>
+        <div class="progress-pct" id="pctLoad">0%</div>
+      </div>
+      <div class="progress-row">
+        <div class="progress-label" id="phaseScanLabel">Analyzing characters…</div>
+        <div class="bar-track"><div class="bar-fill phase-analyze" id="barScan"></div></div>
+        <div class="progress-pct" id="pctScan">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="dashboardPanel" style="display:none;">
+    <h2>2. Dashboard</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="num" id="statTags">0</div>
+        <div class="lbl">Total XML tags (elements)</div>
+      </div>
+      <div class="stat">
+        <div class="num" id="statEntries">0</div>
+        <div class="lbl">Record entries</div>
+        <div class="sub2" id="statEntriesTag">detected repeating tag: —</div>
+      </div>
+      <div class="stat">
+        <div class="num warn" id="statNonEngTotal">0</div>
+        <div class="lbl">Non-English char occurrences</div>
+      </div>
+      <div class="stat">
+        <div class="num warn" id="statNonEngUnique">0</div>
+        <div class="lbl">Unique non-English characters</div>
+      </div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="panel" id="summaryPanel" style="display:none;">
+    <h2>3. Non-English Character Summary</h2>
+    <div class="toolbar">
+      <div class="left">
+        <input type="text" id="summaryFilter" placeholder="Filter by char, hex, or type…">
+        <select id="summarySort">
+          <option value="count_desc">Sort: Occurrences (high→low)</option>
+          <option value="count_asc">Sort: Occurrences (low→high)</option>
+          <option value="type">Sort: Type</option>
+          <option value="hex">Sort: Hex value</option>
+        </select>
+      </div>
+      <button id="exportSummaryBtn">Export Summary CSV</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Char</th><th>Hex</th><th>Type</th><th>Occurrences</th>
+            <th>First Occurrence (line:col)</th><th>First Tag</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel" id="detailPanel" style="display:none;">
+    <h2>4. Detailed Location Report</h2>
+    <div class="toolbar">
+      <div class="left">
+        <input type="text" id="detailFilter" placeholder="Filter by tag, char, or value…">
+        <select id="detailTypeFilter"><option value="">All types</option></select>
+      </div>
+      <button id="exportDetailBtn">Export Detail CSV</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-k="idx">#</th><th data-k="char">Char</th><th data-k="hex">Hex</th>
+            <th data-k="type">Type</th><th data-k="line">Line</th><th data-k="col">Col</th>
+            <th data-k="tag">Tag / Attribute</th><th data-k="value">Containing Value</th>
+          </tr>
+        </thead>
+        <tbody id="detailBody"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <span id="pagerInfo"></span>
+      <button id="pagerPrev">◀ Prev</button>
+      <button id="pagerNext">Next ▶</button>
+    </div>
+  </div>
+
+  <footer>Glyph Sweep — detection is heuristic (Unicode range based). Verify edge cases against the source file for critical compliance decisions.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Unicode classification ----------
+  const RANGES = [
+    {min:0x00A0,max:0x00FF,type:'Accented Latin (Latin-1 Supplement)',cls:'latin'},
+    {min:0x0100,max:0x017F,type:'Accented Latin (Latin Extended-A)',cls:'latin'},
+    {min:0x0180,max:0x024F,type:'Accented Latin (Latin Extended-B)',cls:'latin'},
+    {min:0x0250,max:0x02AF,type:'Accented Latin (IPA Extensions)',cls:'latin'},
+    {min:0x1E00,max:0x1EFF,type:'Accented Latin (Extended Additional)',cls:'latin'},
+    {min:0x0370,max:0x03FF,type:'Greek',cls:'greek'},
+    {min:0x1F00,max:0x1FFF,type:'Greek (Extended)',cls:'greek'},
+    {min:0x0400,max:0x04FF,type:'Cyrillic',cls:'cyrillic'},
+    {min:0x0500,max:0x052F,type:'Cyrillic (Supplement)',cls:'cyrillic'},
+    {min:0x0530,max:0x058F,type:'Armenian',cls:'other'},
+    {min:0x0590,max:0x05FF,type:'Hebrew',cls:'semitic'},
+    {min:0x0600,max:0x06FF,type:'Arabic',cls:'semitic'},
+    {min:0x0750,max:0x077F,type:'Arabic (Supplement)',cls:'semitic'},
+    {min:0x0900,max:0x097F,type:'Indic (Devanagari)',cls:'indic'},
+    {min:0x0980,max:0x09FF,type:'Indic (Bengali)',cls:'indic'},
+    {min:0x0A00,max:0x0A7F,type:'Indic (Gurmukhi)',cls:'indic'},
+    {min:0x0A80,max:0x0AFF,type:'Indic (Gujarati)',cls:'indic'},
+    {min:0x0B00,max:0x0B7F,type:'Indic (Oriya)',cls:'indic'},
+    {min:0x0B80,max:0x0BFF,type:'Indic (Tamil)',cls:'indic'},
+    {min:0x0C00,max:0x0C7F,type:'Indic (Telugu)',cls:'indic'},
+    {min:0x0C80,max:0x0CFF,type:'Indic (Kannada)',cls:'indic'},
+    {min:0x0D00,max:0x0D7F,type:'Indic (Malayalam)',cls:'indic'},
+    {min:0x0D80,max:0x0DFF,type:'Indic (Sinhala)',cls:'indic'},
+    {min:0x0E00,max:0x0E7F,type:'Thai',cls:'other'},
+    {min:0x0E80,max:0x0EFF,type:'Lao',cls:'other'},
+    {min:0x10A0,max:0x10FF,type:'Georgian',cls:'other'},
+    {min:0x1100,max:0x11FF,type:'Hangul (Jamo)',cls:'cjk'},
+    {min:0xAC00,max:0xD7A3,type:'Hangul (Syllables)',cls:'cjk'},
+    {min:0x3040,max:0x309F,type:'Japanese (Hiragana)',cls:'cjk'},
+    {min:0x30A0,max:0x30FF,type:'Japanese (Katakana)',cls:'cjk'},
+    {min:0x3400,max:0x4DBF,type:'CJK (Extension A)',cls:'cjk'},
+    {min:0x4E00,max:0x9FFF,type:'CJK (Unified Ideographs)',cls:'cjk'},
+    {min:0x2018,max:0x201F,type:'Symbol (Smart Punctuation)',cls:'other'},
+    {min:0x2000,max:0x206F,type:'Symbol (General Punctuation)',cls:'other'},
+    {min:0x20A0,max:0x20CF,type:'Symbol (Currency)',cls:'other'},
+    {min:0x2100,max:0x27BF,type:'Symbol (Misc / Dingbats)',cls:'other'},
+    {min:0x1F300,max:0x1FAFF,type:'Symbol (Emoji)',cls:'other'}
+  ];
+  function classify(cp){
+    if(cp <= 0x7F) return null; // basic ASCII / English range, incl control chars
+    for(let i=0;i<RANGES.length;i++){
+      const r = RANGES[i];
+      if(cp>=r.min && cp<=r.max) return r;
+    }
+    return {type:'Other Unicode Symbol', cls:'other'};
+  }
+  const CLASS_COLOR = {
+    latin:'var(--t-latin)', cyrillic:'var(--t-cyrillic)', greek:'var(--t-greek)',
+    indic:'var(--t-indic)', cjk:'var(--t-cjk)', semitic:'var(--t-semitic)', other:'var(--t-other)'
+  };
+  function toHex(cp){ return 'U+' + cp.toString(16).toUpperCase().padStart(4,'0'); }
+  function escHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- DOM refs ----------
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  const fileNameLabel = document.getElementById('fileNameLabel');
+  const progressBlock = document.getElementById('progressBlock');
+  const barLoad = document.getElementById('barLoad');
+  const pctLoad = document.getElementById('pctLoad');
+  const barScan = document.getElementById('barScan');
+  const pctScan = document.getElementById('pctScan');
+  const dashboardPanel = document.getElementById('dashboardPanel');
+  const summaryPanel = document.getElementById('summaryPanel');
+  const detailPanel = document.getElementById('detailPanel');
+  const summaryBody = document.getElementById('summaryBody');
+  const detailBody = document.getElementById('detailBody');
+  const legend = document.getElementById('legend');
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag');
+    if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => { if(e.target.files.length) handleFile(e.target.files[0]); });
+
+  function handleFile(file){
+    fileNameLabel.textContent = file.name + '  ·  ' + (file.size/1024).toFixed(1) + ' KB';
+    progressBlock.classList.remove('hidden');
+    dashboardPanel.style.display = 'none';
+    summaryPanel.style.display = 'none';
+    detailPanel.style.display = 'none';
+    setLoadProgress(0); setScanProgress(0);
+
+    const reader = new FileReader();
+    reader.onprogress = (e) => { if(e.lengthComputable) setLoadProgress(Math.round(e.loaded/e.total*100)); };
+    reader.onload = (e) => {
+      setLoadProgress(100);
+      scanXml(e.target.result);
+    };
+    reader.onerror = () => { alert('Could not read the file.'); };
+    reader.readAsText(file);
+  }
+
+  function setLoadProgress(p){ barLoad.style.width = p+'%'; pctLoad.textContent = p+'%'; }
+  function setScanProgress(p){ barScan.style.width = p+'%'; pctScan.textContent = p+'%'; }
+
+  // ---------- Scanner (chunked, non-blocking) ----------
+  function scanXml(text){
+    const len = text.length;
+    let i = 0, line = 1, col = 1;
+    const tagStack = [];
+    const tagFreq = Object.create(null);
+    let tagCount = 0;
+
+    const summaryMap = new Map(); // char -> {char,cp,hex,type,cls,count,firstLine,firstCol,firstTag}
+    const detailRows = [];        // {idx,char,hex,type,cls,line,col,tag,value}
+
+    // mode flags
+    // 0 = text content, 1 = inside tag markup (after '<' before matching '>')
+    let mode = 0;
+    let textBuf = '';
+    let textStartLine = 1, textStartCol = 1;
+
+    function advance(ch){
+      if(ch === '\n'){ line++; col = 1; } else { col++; }
+    }
+
+    function recordChar(cp, ch, curLine, curCol, tagCtx, valueCtx){
+      const info = classify(cp);
+      if(!info) return;
+      const hex = toHex(cp);
+      if(!summaryMap.has(hex)){
+        summaryMap.set(hex, {
+          char: ch, cp, hex, type: info.type, cls: info.cls,
+          count: 0, firstLine: curLine, firstCol: curCol, firstTag: tagCtx || '(root text)'
+        });
+      }
+      const s = summaryMap.get(hex);
+      s.count++;
+      detailRows.push({
+        idx: detailRows.length+1, char: ch, hex, type: info.type, cls: info.cls,
+        line: curLine, col: curCol, tag: tagCtx || '(root text)', value: valueCtx || ''
+      });
+    }
+
+    function flushTextBuffer(){
+      if(!textBuf) return;
+      const curTag = tagStack.length ? tagStack[tagStack.length-1] : null;
+      const trimmed = textBuf.trim();
+      if(trimmed){
+        // scan the buffer for non-ascii, tracking position per char using saved start pos
+        let bl = textStartLine, bc = textStartCol;
+        for(const ch of textBuf){
+          const cp = ch.codePointAt(0);
+          if(cp > 0x7F){
+            recordChar(cp, ch, bl, bc, curTag, trimmed);
+          }
+          if(ch === '\n'){ bl++; bc = 1; } else { bc += (cp > 0xFFFF ? 1 : 1); }
+        }
+      }
+      textBuf = '';
+    }
+
+    function parseTagAt(startIdx){
+      // startIdx points at '<'; returns {end, kind} where end is index AFTER matching '>'
+      const rest = text.slice(startIdx, startIdx+9);
+      if(rest.startsWith('<!--')){
+        const end = text.indexOf('-->', startIdx+4);
+        return {end: end === -1 ? len : end+3, kind:'comment'};
+      }
+      if(rest.startsWith('<![CDATA[')){
+        const end = text.indexOf(']]>', startIdx+9);
+        const cdataEnd = end === -1 ? len : end;
+        return {end: end === -1 ? len : end+3, kind:'cdata', cdataStart: startIdx+9, cdataEnd};
+      }
+      if(rest.startsWith('<?')){
+        const end = text.indexOf('?>', startIdx+2);
+        return {end: end === -1 ? len : end+2, kind:'pi'};
+      }
+      if(rest.startsWith('<!')){
+        const end = text.indexOf('>', startIdx+2);
+        return {end: end === -1 ? len : end+1, kind:'doctype'};
+      }
+      const end = text.indexOf('>', startIdx+1);
+      return {end: end === -1 ? len : end+1, kind:'tag'};
+    }
+
+    function posAt(idx){
+      // compute line/col by counting from current tracked line/col up to idx (idx >= i)
+      let l = line, c = col;
+      for(let k=i;k<idx;k++){
+        if(text[k] === '\n'){ l++; c=1; } else { c++; }
+      }
+      return {line:l, col:c};
+    }
+
+    function processTagContent(startIdx, endIdx, kind, cdataStart, cdataEnd){
+      const raw = text.slice(startIdx, endIdx);
+      if(kind === 'comment' || kind === 'pi' || kind === 'doctype'){
+        return; // not scanned for non-english (metadata, not data)
+      }
+      if(kind === 'cdata'){
+        const curTag = tagStack.length ? tagStack[tagStack.length-1] : null;
+        const cdataText = text.slice(cdataStart, cdataEnd);
+        const p0 = posAt(cdataStart);
+        let bl = p0.line, bc = p0.col;
+        for(const ch of cdataText){
+          const cp = ch.codePointAt(0);
+          if(cp > 0x7F) recordChar(cp, ch, bl, bc, curTag, cdataText.trim());
+          if(ch === '\n'){ bl++; bc=1; } else { bc++; }
+        }
+        return;
+      }
+      // kind === 'tag': could be open, close, or self-closing
+      const isClose = raw.startsWith('</');
+      const isSelfClose = raw.endsWith('/>');
+      const inner = raw.slice(isClose?2:1, raw.length-(isSelfClose?2:1));
+      const nameMatch = inner.match(/^[^\s\/>]+/);
+      const tagName = nameMatch ? nameMatch[0] : '(unknown)';
+
+      if(isClose){
+        if(tagStack.length && tagStack[tagStack.length-1] === tagName) tagStack.pop();
+        else if(tagStack.length) tagStack.pop(); // best-effort recovery on mismatched markup
+        return;
+      }
+
+      // opening or self-closing tag: count it, scan attribute values
+      tagCount++;
+      tagFreq[tagName] = (tagFreq[tagName]||0)+1;
+
+      // scan attributes: name="value" or name='value'
+      const attrRegex = /([a-zA-Z_:][\w:.-]*)\s*=\s*("([^"]*)"|'([^']*)')/g;
+      let m;
+      while((m = attrRegex.exec(inner)) !== null){
+        const attrName = m[1];
+        const attrVal = m[3] !== undefined ? m[3] : m[4];
+        if(!attrVal) continue;
+        let hasNonAscii = false;
+        for(const ch of attrVal){ if(ch.codePointAt(0) > 0x7F){ hasNonAscii = true; break; } }
+        if(!hasNonAscii) continue;
+        // locate absolute offset of the value within the full text to compute line/col
+        const valOffsetInInner = m.index + m[0].indexOf(attrVal, attrName.length);
+        const absOffset = startIdx + (isClose?2:1) + valOffsetInInner;
+        const p0 = posAt(absOffset);
+        let bl = p0.line, bc = p0.col;
+        const ctxTag = tagName + ' @' + attrName;
+        for(const ch of attrVal){
+          const cp = ch.codePointAt(0);
+          if(cp > 0x7F) recordChar(cp, ch, bl, bc, ctxTag, attrVal);
+          if(ch === '\n'){ bl++; bc=1; } else { bc++; }
+        }
+      }
+
+      if(!isSelfClose) tagStack.push(tagName);
+    }
+
+    const CHUNK = 250000;
+
+    function step(){
+      const chunkEnd = Math.min(i + CHUNK, len);
+      while(i < chunkEnd){
+        const ch = text[i];
+        if(mode === 0){
+          if(ch === '<'){
+            flushTextBuffer();
+            const {end, kind, cdataStart, cdataEnd} = parseTagAt(i);
+            processTagContent(i, end, kind, cdataStart, cdataEnd);
+            // advance line/col across the consumed span
+            for(let k=i;k<end;k++) advance(text[k]);
+            i = end;
+            continue;
+          } else {
+            if(textBuf === ''){ textStartLine = line; textStartCol = col; }
+            textBuf += ch;
+            advance(ch);
+            i++;
+          }
+        }
+      }
+      const pct = Math.round((i/len)*100);
+      setScanProgress(pct);
+      if(i < len){
+        setTimeout(step, 0);
+      } else {
+        flushTextBuffer();
+        finish();
+      }
+    }
+
+    function finish(){
+      // determine record tag = most frequent tag name (repeats > 1), excluding a sole root
+      let recordTag = null, recordCount = 0;
+      for(const name in tagFreq){
+        if(tagFreq[name] > recordCount){ recordCount = tagFreq[name]; recordTag = name; }
+      }
+      if(recordCount <= 1){ recordTag = null; recordCount = 0; }
+
+      renderResults({
+        tagCount, recordTag, recordCount,
+        summaryMap, detailRows
+      });
+    }
+
+    setScanProgress(0);
+    setTimeout(step, 0);
+  }
+
+  // ---------- Rendering ----------
+  let STATE = null;
+  let detailPage = 0;
+  const PAGE_SIZE = 100;
+
+  function renderResults(res){
+    STATE = res;
+    document.getElementById('statTags').textContent = res.tagCount.toLocaleString();
+    document.getElementById('statEntries').textContent = res.recordTag ? res.recordCount.toLocaleString() : '—';
+    document.getElementById('statEntriesTag').textContent = res.recordTag
+      ? 'detected repeating tag: <' + res.recordTag + '>'
+      : 'no clearly repeating tag detected';
+
+    const totalOcc = res.detailRows.length;
+    const uniqueChars = res.summaryMap.size;
+    document.getElementById('statNonEngTotal').textContent = totalOcc.toLocaleString();
+    document.getElementById('statNonEngUnique').textContent = uniqueChars.toLocaleString();
+
+    renderLegend();
+    renderSummaryTable();
+    renderDetailTypeFilter();
+    detailPage = 0;
+    renderDetailTable();
+
+    dashboardPanel.style.display = '';
+    summaryPanel.style.display = totalOcc ? '' : '';
+    detailPanel.style.display = totalOcc ? '' : '';
+
+    if(totalOcc === 0){
+      summaryBody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No non-English characters detected. File appears to be pure ASCII / English content.</div></td></tr>';
+      detailBody.innerHTML = '<tr><td colspan="8"><div class="empty-state">Nothing to report.</div></td></tr>';
+    }
+  }
+
+  function renderLegend(){
+    const seen = new Set();
+    for(const s of STATE.summaryMap.values()) seen.add(s.cls);
+    const labels = {latin:'Accented Latin', cyrillic:'Cyrillic', greek:'Greek', indic:'Indic Scripts', cjk:'CJK / Hangul / Kana', semitic:'Arabic / Hebrew', other:'Other Symbols'};
+    legend.innerHTML = Object.keys(labels).map(cls => {
+      const dim = seen.has(cls) ? '' : 'opacity:.35;';
+      return `<span class="chip" style="${dim}"><span class="dot" style="background:${CLASS_COLOR[cls]}"></span>${labels[cls]}</span>`;
+    }).join('');
+  }
+
+  function typeBadge(type, cls){
+    return `<span class="type-badge"><span class="dot" style="background:${CLASS_COLOR[cls]}"></span>${escHtml(type)}</span>`;
+  }
+
+  function getSummaryRows(){
+    let rows = Array.from(STATE.summaryMap.values());
+    const filter = document.getElementById('summaryFilter').value.trim().toLowerCase();
+    if(filter){
+      rows = rows.filter(r => r.char.toLowerCase().includes(filter) || r.hex.toLowerCase().includes(filter) || r.type.toLowerCase().includes(filter));
+    }
+    const sort = document.getElementById('summarySort').value;
+    rows.sort((a,b) => {
+      if(sort === 'count_desc') return b.count - a.count;
+      if(sort === 'count_asc') return a.count - b.count;
+      if(sort === 'type') return a.type.localeCompare(b.type);
+      if(sort === 'hex') return a.hex.localeCompare(b.hex);
+      return 0;
+    });
+    return rows;
+  }
+
+  function renderSummaryTable(){
+    const rows = getSummaryRows();
+    if(!rows.length){
+      summaryBody.innerHTML = '<tr><td colspan="6"><div class="empty-state">No matches.</div></td></tr>';
+      return;
+    }
+    summaryBody.innerHTML = rows.map(r => `
+      <tr>
+        <td><span class="glyph">${escHtml(r.char)}</span></td>
+        <td>${r.hex}</td>
+        <td>${typeBadge(r.type, r.cls)}</td>
+        <td>${r.count.toLocaleString()}</td>
+        <td>${r.firstLine}:${r.firstCol}</td>
+        <td class="tag-cell">${escHtml(r.firstTag)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderDetailTypeFilter(){
+    const sel = document.getElementById('detailTypeFilter');
+    const types = Array.from(new Set(Array.from(STATE.summaryMap.values()).map(r=>r.type))).sort();
+    sel.innerHTML = '<option value="">All types</option>' + types.map(t=>`<option value="${escHtml(t)}">${escHtml(t)}</option>`).join('');
+  }
+
+  function getDetailRows(){
+    let rows = STATE.detailRows;
+    const filter = document.getElementById('detailFilter').value.trim().toLowerCase();
+    const typeFilter = document.getElementById('detailTypeFilter').value;
+    if(filter){
+      rows = rows.filter(r => r.tag.toLowerCase().includes(filter) || r.char.toLowerCase().includes(filter) || (r.value||'').toLowerCase().includes(filter));
+    }
+    if(typeFilter){
+      rows = rows.filter(r => r.type === typeFilter);
+    }
+    return rows;
+  }
+
+  function renderDetailTable(){
+    const rows = getDetailRows();
+    const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+    if(detailPage >= totalPages) detailPage = totalPages - 1;
+    if(detailPage < 0) detailPage = 0;
+    const start = detailPage * PAGE_SIZE;
+    const pageRows = rows.slice(start, start + PAGE_SIZE);
+
+    if(!pageRows.length){
+      detailBody.innerHTML = '<tr><td colspan="8"><div class="empty-state">No matches.</div></td></tr>';
+    } else {
+      detailBody.innerHTML = pageRows.map(r => {
+        const valDisplay = r.value ? escHtml(r.value.length > 80 ? r.value.slice(0,80)+'…' : r.value).replace(escHtml(r.char), '<mark>'+escHtml(r.char)+'</mark>') : '';
+        return `
+        <tr>
+          <td>${r.idx}</td>
+          <td><span class="glyph">${escHtml(r.char)}</span></td>
+          <td>${r.hex}</td>
+          <td>${typeBadge(r.type, r.cls)}</td>
+          <td>${r.line}</td>
+          <td>${r.col}</td>
+          <td class="tag-cell">${escHtml(r.tag)}</td>
+          <td class="value-cell" title="${escHtml(r.value||'')}">${valDisplay}</td>
+        </tr>`;
+      }).join('');
+    }
+    document.getElementById('pagerInfo').textContent =
+      rows.length ? `Showing ${start+1}–${Math.min(start+PAGE_SIZE, rows.length)} of ${rows.length}  ·  page ${detailPage+1}/${totalPages}` : 'No rows';
+  }
+
+  document.getElementById('summaryFilter').addEventListener('input', renderSummaryTable);
+  document.getElementById('summarySort').addEventListener('change', renderSummaryTable);
+  document.getElementById('detailFilter').addEventListener('input', () => { detailPage=0; renderDetailTable(); });
+  document.getElementById('detailTypeFilter').addEventListener('change', () => { detailPage=0; renderDetailTable(); });
+  document.getElementById('pagerPrev').addEventListener('click', () => { detailPage--; renderDetailTable(); });
+  document.getElementById('pagerNext').addEventListener('click', () => { detailPage++; renderDetailTable(); });
+
+  // ---------- CSV export ----------
+  function downloadCsv(filename, rows, headers){
+    const esc = v => {
+      const s = (v===undefined||v===null) ? '' : String(v);
+      if(/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+      return s;
+    };
+    const lines = [headers.map(esc).join(',')];
+    for(const row of rows) lines.push(row.map(esc).join(','));
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('exportSummaryBtn').addEventListener('click', () => {
+    if(!STATE) return;
+    const rows = getSummaryRows().map(r => [r.char, r.hex, r.type, r.count, `${r.firstLine}:${r.firstCol}`, r.firstTag]);
+    downloadCsv('non_english_char_summary.csv', rows, ['Char','Hex','Type','Occurrences','First Occurrence (line:col)','First Tag']);
+  });
+
+  document.getElementById('exportDetailBtn').addEventListener('click', () => {
+    if(!STATE) return;
+    const rows = getDetailRows().map(r => [r.idx, r.char, r.hex, r.type, r.line, r.col, r.tag, r.value]);
+    downloadCsv('non_english_char_detail_report.csv', rows, ['#','Char','Hex','Type','Line','Column','Tag / Attribute','Containing Value']);
+  });
+
+})();
+</script>
+</body>
+</html>
